@@ -19,7 +19,7 @@ package Astro::FITS::HdrTrans;
 #  Authors:
 #    Brad Cavanagh (b.cavanagh@jach.hawaii.edu)
 #  Revision:
-#     $Id: HdrTrans.pm,v 1.18 2003/09/16 02:23:36 bradc Exp $
+#     $Id: HdrTrans.pm,v 1.19 2003/09/17 00:23:41 bradc Exp $
 
 #  Copyright:
 #     Copyright (C) 2002 Particle Physics and Astronomy Research Council.
@@ -61,7 +61,7 @@ use Time::Piece;
 
 use vars qw/ $VERSION /;
 
-$VERSION = '0.01';
+$VERSION = '0.02';
 
 require Exporter;
 
@@ -79,7 +79,7 @@ my $DEBUG = 0;
 
 =head1 REVISION
 
-$Id: HdrTrans.pm,v 1.18 2003/09/16 02:23:36 bradc Exp $
+$Id: HdrTrans.pm,v 1.19 2003/09/17 00:23:41 bradc Exp $
 
 =head1 PUBLIC VARIABLES
 

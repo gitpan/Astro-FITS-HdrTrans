@@ -20,7 +20,7 @@ package Astro::FITS::HdrTrans::IRCAM;
 #  Authors:
 #    Brad Cavanagh (b.cavanagh@jach.hawaii.edu)
 #  Revision:
-#     $Id: IRCAM.pm,v 1.14 2003/09/16 02:20:03 bradc Exp $
+#     $Id: IRCAM.pm,v 1.15 2003/09/17 00:23:41 bradc Exp $
 
 #  Copyright:
 #     Copyright (C) 2003 Particle Physics and Astronomy Research Council.
@@ -47,7 +47,7 @@ Kingdom Infrared Telescope IRCAM infrared camera.
 use strict;
 use vars qw/ $VERSION /;
 
-$VERSION = '0.01';
+$VERSION = '0.02';
 
 require Exporter;
 
@@ -65,7 +65,7 @@ our %hdr;
 
 =head1 REVISION
 
-$Id: IRCAM.pm,v 1.14 2003/09/16 02:20:03 bradc Exp $
+$Id: IRCAM.pm,v 1.15 2003/09/17 00:23:41 bradc Exp $
 
 =head1 METHODS
 

@@ -20,7 +20,7 @@ package Astro::FITS::HdrTrans::UIST;
 #  Authors:
 #    Brad Cavanagh (b.cavanagh@jach.hawaii.edu)
 #  Revision:
-#     $Id: UIST.pm,v 1.8 2003/09/16 02:20:58 bradc Exp $
+#     $Id: UIST.pm,v 1.9 2003/09/17 00:23:41 bradc Exp $
 
 #  Copyright:
 #     Copyright (C) 2003 Particle Physics and Astronomy Research Council.
@@ -48,7 +48,7 @@ Astro::FITS::HdrTrans for a list of generic headers.
 use strict;
 use vars qw/ $VERSION /;
 
-$VERSION = '0.01';
+$VERSION = '0.02';
 
 require Exporter;
 
@@ -66,7 +66,7 @@ our %hdr;
 
 =head1 REVISION
 
-$Id: UIST.pm,v 1.8 2003/09/16 02:20:58 bradc Exp $
+$Id: UIST.pm,v 1.9 2003/09/17 00:23:41 bradc Exp $
 
 =head1 METHODS
 

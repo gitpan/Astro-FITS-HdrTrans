@@ -20,7 +20,7 @@ package Astro::FITS::HdrTrans::CGS4;
 #  Authors:
 #    Brad Cavanagh (b.cavanagh@jach.hawaii.edu)
 #  Revision:
-#     $Id: CGS4.pm,v 1.19 2003/09/16 02:51:11 bradc Exp $
+#     $Id: CGS4.pm,v 1.20 2003/09/17 00:23:41 bradc Exp $
 
 #  Copyright:
 #     Copyright (C) 2002 Particle Physics and Astronomy Research Council.
@@ -48,7 +48,7 @@ headers.
 use strict;
 use vars qw/ $VERSION /;
 
-$VERSION = '0.01';
+$VERSION = '0.02';
 
 require Exporter;
 
@@ -66,7 +66,7 @@ our %hdr;
 
 =head1 REVISION
 
-$Id: CGS4.pm,v 1.19 2003/09/16 02:51:11 bradc Exp $
+$Id: CGS4.pm,v 1.20 2003/09/17 00:23:41 bradc Exp $
 
 =head1 METHODS
 
