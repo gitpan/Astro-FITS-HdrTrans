@@ -19,28 +19,8 @@ Math::Trig in order to do zenith distance to airmass translations.
 Adding Subclasses
 -----------------
 Adding subclasses to do translations for other instruments should
-be fairly straight-forward. The first step is writing an appropriate
-valid_class function that returns true or false depending on the
-contents of the header passed to it. You must come up with a unique
-way of figuring out if the header is one that your subclass will
-translate; using the instrument name should usually be enough.
-
-After you have done that it comes time to write the actual translations.
-One-to-one translations are handled in the %hdr hash, with the generic
-headers being the keys and the instrument-specific headers being the
-values. For many-to-one translations, set up the to_ and from_
-methods.
-
-UTDATE, UTSTART, and UTEND be returned as Time::Piece objects when
-translating to generic headers, and must be passed as Time::Piece
-objects when translating to instrument-specific headers. Keep this
-in mind when writing translations for these three.
-
-Examples of translations can be found in the Astro::FITS::HdrTrans::IRCAM
-subclass.
-
-Don't forget to return a true value from your subclass by putting "1;"
-on the last line!
+be fairly straight-forward. Detailed documentation can be found
+in the Astro::FITS::HdrTrans::Base class.
 
 Where can I get it?
 -------------------
@@ -55,14 +35,28 @@ Installation is automated using the ExtUtils::MakeMaker library
     % make test
     % make install
 
-Authors
--------
-The module was written by Brad Cavanagh <b.cavanagh@jach.hawaii.edu> of 
-the Joint Astronomy Centre (JAC) in Hawaii.
+Authors 
+------- 
 
-Copyright (C) 2003 Particle Physics and Astronomy Research Council.
-All Rights Reserved. This program is free software; you can redistribute
-it and/or modify it under the same terms as Perl itself.
+The module was written by Brad Cavanagh <b.cavanagh@jach.hawaii.edu> and
+Tim Jenness <t.jenness@jach.hawaii.edu> of the Joint Astronomy Centre
+(JAC) in Hawaii.
+
+Copyright (C) 2003-2005 Particle Physics and Astronomy Research Council.
+All Rights Reserved. 
+
+This program is free software; you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation; either version 2 of the License, or (at your option) any later
+version.
+
+This program is distributed in the hope that it will be useful,but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with
+this program; if not, write to the Free Software Foundation, Inc., 59 Temple
+Place,Suite 330, Boston, MA  02111-1307, USA
 
 Maintainer
 ----------
@@ -77,3 +71,5 @@ Changes
  v0.02 - Change licence in README to be same as Perl.
          Add copyright statement.
          Add requirement on Test::More and Time::Piece to Makefile.PL.
+
+ v0.03 - Licence should have been GPL

@@ -1,21 +1,21 @@
 # -*-perl-*-
 
-package Astro::FITS::HdrTrans::UIST;
+package Astro::FITS::HdrTrans::MICHELLE;
 
 =head1 NAME
 
-Astro::FITS::HdrTrans::UIST - UKIRT UIST translations
+Astro::FITS::HdrTrans::MICHELLE - UKIRT Michelle translations
 
 =head1 SYNOPSIS
 
-  use Astro::FITS::HdrTrans::UIST;
+  use Astro::FITS::HdrTrans::MICHELLE;
 
-  %gen = Astro::FITS::HdrTrans::UIST->translate_from_FITS( %hdr );
+  %gen = Astro::FITS::HdrTrans::MICHELLE->translate_from_FITS( %hdr );
 
 =head1 DESCRIPTION
 
 This class provides a generic set of translations that are specific to
-the UIST camera and spectrometer of the United Kingdom Infrared
+the MICHELLE camera and spectrometer of the United Kingdom Infrared
 Telescope.
 
 =cut
@@ -25,12 +25,16 @@ use warnings;
 use strict;
 use Carp;
 
-# Inherit from UKIRTNew
-use base qw/ Astro::FITS::HdrTrans::UKIRTNew /;
+# Inherit from UKIRT
+# Inherit from FITS to get X_BASE and Y_BASE
+# UKIRTNew must come first because of DATE-OBS handling
+use base qw/ Astro::FITS::HdrTrans::UKIRTNew
+	     Astro::FITS::HdrTrans::FITS
+	     /;
 
 use vars qw/ $VERSION /;
 
-$VERSION = sprintf("%d.%03d", q$Revision: 1.16 $ =~ /(\d+)\.(\d+)/);
+$VERSION = sprintf("%d.%03d", q$Revision: 1.19 $ =~ /(\d+)\.(\d+)/);
 
 # for a constant mapping, there is no FITS header, just a generic
 # header that is constant
@@ -38,37 +42,39 @@ my %CONST_MAP = (
 
 		);
 
-# NULL mappings used to override base class implementations
-my @NULL_MAP = qw/ DETECTOR_INDEX /;
-
 # unit mapping implies that the value propogates directly
 # to the output with only a keyword name change
 
 my %UNIT_MAP = (
-		# UIST specific
-		DEC_SCALE            => "PIXLSIZE",
-		GRATING_NAME         => "GRISM",
-		RA_SCALE             => "PIXLSIZE",
-		# Not imaging
-		GRATING_DISPERSION   => "DISPERSN",
-		GRATING_WAVELENGTH   => "CENWAVL",
-		SLIT_ANGLE           => "SLIT_PA",
-		SLIT_WIDTH           => "SLITWID",
-		# MICHELLE compatible
+		# Michelle Specific
+		CHOP_ANGLE           => "CHPANGLE",
+		CHOP_THROW           => "CHPTHROW",
+		GRATING_DISPERSION   => "GRATDISP",
+		GRATING_NAME         => "GRATNAME",
+		GRATING_ORDER        => "GRATORD",
+		GRATING_WAVELENGTH   => "GRATPOS",
+		SAMPLING             => "SAMPLING",
+		SLIT_ANGLE           => "SLITANG",
+		# CGS4 compatible
+		NSCAN_POSITIONS      => "DETNINCR",
+		SCAN_INCREMENT       => "DETINCR",
+		# UIST compatible
 		DETECTOR_READ_TYPE   => "DET_MODE",
 		NUMBER_OF_READS      => "NREADS",
 		POLARIMETRY          => "POLARISE",
 		SLIT_NAME            => "SLITNAME",
 		OBSERVATION_MODE     => "INSTMODE",
-		# MICHELLE + WFCAM compatible
+		# UIST + WFCAM compatible
 		EXPOSURE_TIME        => "EXP_TIME",
-		# CGS4 + MICHELLE + WFCAM
+		# UFTI + IRCAM compatible
+		SPEED_GAIN           => "SPD_GAIN",
+		# CGS4 + UIST + WFCAM
 		CONFIGURATION_INDEX  => 'CNFINDEX',
 	       );
 
 
 # Create the translation methods
-__PACKAGE__->_generate_lookup_methods( \%CONST_MAP, \%UNIT_MAP, \@NULL_MAP );
+__PACKAGE__->_generate_lookup_methods( \%CONST_MAP, \%UNIT_MAP );
 
 =head1 METHODS
 
@@ -83,19 +89,19 @@ C<can_translate> method.
 
   $inst = $class->this_instrument();
 
-Returns "UIST".
+Returns "MICHELLE".
 
 =cut
 
 sub this_instrument {
-  return "UIST";
+  return "MICHELLE";
 }
 
 =back
 
 =head1 REVISION
 
- $Id: UIST.pm,v 1.16 2005/04/06 21:53:06 timj Exp $
+ $Id: MICHELLE.pm,v 1.19 2005/04/06 03:42:10 timj Exp $
 
 =head1 SEE ALSO
 

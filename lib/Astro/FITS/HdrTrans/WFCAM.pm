@@ -1,22 +1,21 @@
 # -*-perl-*-
 
-package Astro::FITS::HdrTrans::UIST;
+package Astro::FITS::HdrTrans::WFCAM;
 
 =head1 NAME
 
-Astro::FITS::HdrTrans::UIST - UKIRT UIST translations
+Astro::FITS::HdrTrans::WFCAM - UKIRT WFCAM translations
 
 =head1 SYNOPSIS
 
-  use Astro::FITS::HdrTrans::UIST;
+  use Astro::FITS::HdrTrans::WFCAM;
 
-  %gen = Astro::FITS::HdrTrans::UIST->translate_from_FITS( %hdr );
+  %gen = Astro::FITS::HdrTrans::WFCAM->translate_from_FITS( %hdr );
 
 =head1 DESCRIPTION
 
 This class provides a generic set of translations that are specific to
-the UIST camera and spectrometer of the United Kingdom Infrared
-Telescope.
+the WFCAM camera of the United Kingdom Infrared Telescope.
 
 =cut
 
@@ -28,9 +27,13 @@ use Carp;
 # Inherit from UKIRTNew
 use base qw/ Astro::FITS::HdrTrans::UKIRTNew /;
 
+# We want the FITS standard versions of DATE-OBS/DATE-END parsing
+# Not the UKIRT-specific versions that have Z problems
+use Astro::FITS::HdrTrans::FITS qw/ UTSTART UTEND /;
+
 use vars qw/ $VERSION /;
 
-$VERSION = sprintf("%d.%03d", q$Revision: 1.16 $ =~ /(\d+)\.(\d+)/);
+$VERSION = sprintf("%d.%03d", q$Revision: 1.8 $ =~ /(\d+)\.(\d+)/);
 
 # for a constant mapping, there is no FITS header, just a generic
 # header that is constant
@@ -39,28 +42,17 @@ my %CONST_MAP = (
 		);
 
 # NULL mappings used to override base class implementations
-my @NULL_MAP = qw/ DETECTOR_INDEX /;
+my @NULL_MAP = qw/ DETECTOR_INDEX WAVEPLATE_ANGLE /;
 
 # unit mapping implies that the value propogates directly
 # to the output with only a keyword name change
 
 my %UNIT_MAP = (
-		# UIST specific
-		DEC_SCALE            => "PIXLSIZE",
-		GRATING_NAME         => "GRISM",
-		RA_SCALE             => "PIXLSIZE",
-		# Not imaging
-		GRATING_DISPERSION   => "DISPERSN",
-		GRATING_WAVELENGTH   => "CENWAVL",
-		SLIT_ANGLE           => "SLIT_PA",
-		SLIT_WIDTH           => "SLITWID",
-		# MICHELLE compatible
-		DETECTOR_READ_TYPE   => "DET_MODE",
-		NUMBER_OF_READS      => "NREADS",
-		POLARIMETRY          => "POLARISE",
-		SLIT_NAME            => "SLITNAME",
-		OBSERVATION_MODE     => "INSTMODE",
-		# MICHELLE + WFCAM compatible
+		# WFCAM specific
+		DETECTOR_READ_TYPE   => "READMODE",
+		NUMBER_OF_OFFSETS    => "NJITTER",
+		TILE_NUMBER          => "TILENUM",
+		# MICHELLE + UIST compatible
 		EXPOSURE_TIME        => "EXP_TIME",
 		# CGS4 + MICHELLE + WFCAM
 		CONFIGURATION_INDEX  => 'CNFINDEX',
@@ -83,19 +75,19 @@ C<can_translate> method.
 
   $inst = $class->this_instrument();
 
-Returns "UIST".
+Returns "WFCAM".
 
 =cut
 
 sub this_instrument {
-  return "UIST";
+  return "WFCAM";
 }
 
 =back
 
 =head1 REVISION
 
- $Id: UIST.pm,v 1.16 2005/04/06 21:53:06 timj Exp $
+ $Id: WFCAM.pm,v 1.8 2005/04/06 03:42:10 timj Exp $
 
 =head1 SEE ALSO
 

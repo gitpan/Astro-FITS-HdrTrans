@@ -1,22 +1,14 @@
-# -*-perl-*-
-
-package Astro::FITS::HdrTrans::UIST;
+package Astro::FITS::HdrTrans::SCUBA2;
 
 =head1 NAME
 
-Astro::FITS::HdrTrans::UIST - UKIRT UIST translations
-
-=head1 SYNOPSIS
-
-  use Astro::FITS::HdrTrans::UIST;
-
-  %gen = Astro::FITS::HdrTrans::UIST->translate_from_FITS( %hdr );
+Astro::FITS::HdrTrans::SCUBA2 - JCMT SCUBA-2 translations
 
 =head1 DESCRIPTION
 
-This class provides a generic set of translations that are specific to
-the UIST camera and spectrometer of the United Kingdom Infrared
-Telescope.
+Converts information contained in SCUBA-2 FITS headers to and from
+generic headers. See L<Astro::FITS::HdrTrans> for a list of generic
+headers.
 
 =cut
 
@@ -25,45 +17,27 @@ use warnings;
 use strict;
 use Carp;
 
-# Inherit from UKIRTNew
-use base qw/ Astro::FITS::HdrTrans::UKIRTNew /;
+# Inherit from Base
+use base qw/ Astro::FITS::HdrTrans::Base /;
 
 use vars qw/ $VERSION /;
 
-$VERSION = sprintf("%d.%03d", q$Revision: 1.16 $ =~ /(\d+)\.(\d+)/);
+$VERSION = sprintf("%d.%03d", q$Revision: 1.2 $ =~ /(\d+)\.(\d+)/);
 
 # for a constant mapping, there is no FITS header, just a generic
 # header that is constant
 my %CONST_MAP = (
-
 		);
 
 # NULL mappings used to override base class implementations
-my @NULL_MAP = qw/ DETECTOR_INDEX /;
+my @NULL_MAP = ();
 
 # unit mapping implies that the value propogates directly
 # to the output with only a keyword name change
 
 my %UNIT_MAP = (
-		# UIST specific
-		DEC_SCALE            => "PIXLSIZE",
-		GRATING_NAME         => "GRISM",
-		RA_SCALE             => "PIXLSIZE",
-		# Not imaging
-		GRATING_DISPERSION   => "DISPERSN",
-		GRATING_WAVELENGTH   => "CENWAVL",
-		SLIT_ANGLE           => "SLIT_PA",
-		SLIT_WIDTH           => "SLITWID",
-		# MICHELLE compatible
-		DETECTOR_READ_TYPE   => "DET_MODE",
-		NUMBER_OF_READS      => "NREADS",
-		POLARIMETRY          => "POLARISE",
-		SLIT_NAME            => "SLITNAME",
-		OBSERVATION_MODE     => "INSTMODE",
-		# MICHELLE + WFCAM compatible
-		EXPOSURE_TIME        => "EXP_TIME",
-		# CGS4 + MICHELLE + WFCAM
-		CONFIGURATION_INDEX  => 'CNFINDEX',
+		INSTRUMENT           => "INSTRUME",
+		TELESCOPE            => "TELESCOP",
 	       );
 
 
@@ -83,28 +57,27 @@ C<can_translate> method.
 
   $inst = $class->this_instrument();
 
-Returns "UIST".
+Returns "SCUBA2".
 
 =cut
 
 sub this_instrument {
-  return "UIST";
+  return "SCUBA2";
 }
 
 =back
 
 =head1 REVISION
 
- $Id: UIST.pm,v 1.16 2005/04/06 21:53:06 timj Exp $
+ $Id: SCUBA2.pm,v 1.2 2005/04/06 19:32:41 timj Exp $
 
 =head1 SEE ALSO
 
-C<Astro::FITS::HdrTrans>, C<Astro::FITS::HdrTrans::UKIRT>.
+C<Astro::FITS::HdrTrans>, C<Astro::FITS::HdrTrans::Base>
 
 =head1 AUTHOR
 
-Brad Cavanagh E<lt>b.cavanagh@jach.hawaii.eduE<gt>,
-Tim Jenness E<lt>t.jenness@jach.hawaii.eduE<gt>.
+Tim Jenness E<lt>t.jenness@jach.hawaii.eduE<gt>
 
 =head1 COPYRIGHT
 
