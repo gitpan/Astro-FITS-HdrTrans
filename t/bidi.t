@@ -113,6 +113,14 @@ for my $hdrfile (sort readdir $dh) {
     my $item = $fits->itembyname( $nkey );
 
     if (!defined $item) {
+
+      # Special case for SCUBA. It doesn't have a DATE header in the
+      # reference FITS header.
+      if( $inst eq 'scuba' && $nkey eq 'DATE' ) {
+        ok( 1, 'cf scuba DATE' );
+        next;
+      }
+
       ok(0, "$inst Key $nkey present in translated header but not reference header");
       print "# Key $nkey had a value of '" .
          (defined $thisval ? $thisval : "<UNDEF>") ."'\n";
@@ -124,6 +132,10 @@ for my $hdrfile (sort readdir $dh) {
       $refval  = sprintf( "%.3f", $refval);
       $thisval = sprintf( "%.3f", $thisval);
 
+    } elsif ( defined( $refval ) &&
+              $refval !~ /^[-+]/ &&
+              $refval =~ /\d\d:\d\d:\d\d\.(\d+)/ ) {
+      $refval =~ s/\.(\d+)//;
     }
 
     is( $thisval, $refval, "cf $inst $nkey");
