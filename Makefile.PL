@@ -26,12 +26,20 @@ my $file = File::Spec->catfile(File::Spec->curdir, "lib", "Astro",
 WriteMakefile( 
                'NAME'           => 'Astro::FITS::HdrTrans',
                'VERSION_FROM'   => $file,
-               'PREREQ_PM'      => { 
-                                    Switch => 0,
+               'PREREQ_PM'      => {
+                                    'Astro::Coords' => 0,
+                                    'Astro::FITS::Header' => 0,
+                                    'Astro::SLA' => 0,
+                                    'Astro::Telescope' => 0,
+                                    'DateTime' => 0,
+                                    'DateTime::TimeZone' => 0,
                                     'Math::Trig' => 0,
+                                    'Scalar::Util' => 0,
+                                    'Switch' => 0,
                                     'Test::More' => 0,
                                     'Time::Piece' => 0,
                                    },
+               'EXE_FILES'      => [qw/ translatehdr /],
                'dist'           => { COMPRESS => "gzip -9f"},
                ($] >= 5.005 ?    ## Add these new keywords supported since 5.005
                ( ABSTRACT_FROM  => $file,

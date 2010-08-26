@@ -1,5 +1,3 @@
-# -*-perl-*-
-
 package Astro::FITS::HdrTrans::ACSIS;
 
 =head1 NAME
@@ -21,19 +19,27 @@ use warnings;
 use strict;
 use Carp;
 
+use Astro::Coords;
+use Astro::Telescope;
+use DateTime;
+use DateTime::TimeZone;
+
 # inherit from the Base translation class and not HdrTrans
 # itself (which is just a class-less wrapper)
-use base qw/ Astro::FITS::HdrTrans::FITS /;
+use base qw/ Astro::FITS::HdrTrans::JCMT /;
 
 # Use the FITS standard DATE-OBS handling
-use Astro::FITS::HdrTrans::FITS;
+#use Astro::FITS::HdrTrans::FITS;
 
 # Speed of light in km/s.
 use constant CLIGHT => 2.99792458e5;
 
 use vars qw/ $VERSION /;
 
-$VERSION = sprintf("%d.%03d", q$Revision: 0.6 $ =~ /(\d+)\.(\d+)/);
+$VERSION = "1.02";
+
+# Cache UTC definition
+our $UTC = DateTime::TimeZone->new( name => 'UTC' );
 
 # in each class we have three sets of data.
 #   - constant mappings
@@ -43,50 +49,29 @@ $VERSION = sprintf("%d.%03d", q$Revision: 0.6 $ =~ /(\d+)\.(\d+)/);
 # for a constant mapping, there is no FITS header, just a generic
 # header that is constant
 my %CONST_MAP = (
-		 INST_DHS          => 'ACSIS',
+                 INST_DHS          => 'ACSIS',
+                 SUBSYSTEM_IDKEY   => 'SUBSYSNR',
                 );
 
 # unit mapping implies that the value propogates directly
 # to the output with only a keyword name change
 
 my %UNIT_MAP = (
-		AIRMASS_START      => 'AMSTART',
-		AIRMASS_END        => 'AMEND',
-		AMBIENT_TEMPERATURE=> 'ATSTART',
-    AZIMUTH_START      => 'AZSTART',
-    AZIMUTH_END        => 'AZEND',
-    BACKEND            => 'BACKEND',
-    BANDWIDTH_MODE     => 'BWMODE',
-		CHOP_ANGLE         => 'CHOP_PA',
-    CHOP_COORDINATE_SYSTEM => 'CHOP_CRD',
-    CHOP_FREQUENCY     => 'CHOP_FRQ',
-		CHOP_THROW         => 'CHOP_THR',
-    DEC_BASE           => 'CRVAL2',
-    DEC_SCALE_UNITS    => 'CUNIT2',
-		DR_RECIPE          => 'DRRECIPE',
-    ELEVATION_START    => 'ELSTART',
-    ELEVATION_END      => 'ELEND',
-    EQUINOX            => 'EQUINOX',
-    FRONTEND           => 'INSTRUME',
-    HUMIDITY           => 'HUMSTART',
-    LATITUDE           => 'LAT-OBS',
-    LONGITUDE          => 'LONG-OBS',
-		MSBID              => 'MSBID',
-    NUMBER_OF_CYCLES   => 'NUM_CYC',
-		OBJECT             => 'OBJECT',
-		OBSERVATION_NUMBER => 'OBSNUM',
-		POLARIMETER        => 'POL_CONN',
-		PROJECT            => 'PROJECT',
-    RA_BASE            => 'CRVAL1',
-    RA_SCALE_UNITS     => 'CUNIT1',
-    REST_FREQUENCY     => 'RESTFREQ',
-		SEEING             => 'SEEINGST',
-		STANDARD           => 'STANDARD',
-		SWITCH_MODE        => 'SW_MODE',
-		TAU                => 'WVMTAUST',
-    VELOCITY_REFERENCE_FRAME => 'SPECSYS',
-    VELOCITY_TYPE      => 'DOPPLER',
-    WAVEPLATE_ANGLE    => 'SKYANG',
+                AIRMASS_END        => 'AMEND',
+                AMBIENT_TEMPERATURE=> 'ATSTART',
+                AZIMUTH_END        => 'AZEND',
+                BACKEND            => 'BACKEND',
+                BANDWIDTH_MODE     => 'BWMODE',
+                CHOP_ANGLE         => 'CHOP_PA',
+                CHOP_COORDINATE_SYSTEM => 'CHOP_CRD',
+                CHOP_FREQUENCY     => 'CHOP_FRQ',
+                CHOP_THROW         => 'CHOP_THR',
+                ELEVATION_END      => 'ELEND',
+                FRONTEND           => 'INSTRUME',
+                NUMBER_OF_CYCLES   => 'NUM_CYC',
+                SEEING             => 'SEEINGST',
+                SWITCH_MODE        => 'SW_MODE',
+                VELOCITY_TYPE      => 'DOPPLER',
                );
 
 # Create the translation methods
@@ -121,7 +106,6 @@ sub can_translate {
   }
 }
 
-
 =back
 
 =head1 COMPLEX CONVERSIONS
@@ -135,6 +119,170 @@ these are many-to-many)
 
 =over 4
 
+=item B<to_DR_RECIPE>
+
+Usually simply copies the "RECIPE" header. If the observation type is
+skydip and the RECIPE header is "REDUCE_SCIENCE" we actually use
+REDUCE_SKYDIP. If a skydip is not being done and the STANDARD header
+is true, then the recipe is set to REDUCE_STANDARD. If the INBEAM
+header is "POL", the recipe name has "_POL" appended if it is a
+science observation. "REDUCE_SCIENCE" is translated to
+"REDUCE_SCIENCE_GRADIENT".
+
+=cut
+
+sub to_DR_RECIPE {
+  my $class = shift;
+  my $FITS_headers = shift;
+
+  my $dr = $FITS_headers->{RECIPE};
+
+  my $obstype = lc( $class->to_OBSERVATION_TYPE( $FITS_headers ) );
+  my $pol = $class->to_POLARIMETER( $FITS_headers );
+  my $standard = $class->to_STANDARD( $FITS_headers );
+  my $utdate = $class->to_UTDATE( $FITS_headers );
+
+  if ($utdate < 20080701) {
+    if ($obstype eq 'skydip' && $dr eq 'REDUCE_SCIENCE') {
+      $dr = "REDUCE_SKYDIP";
+    }
+  }
+
+  my $is_sci = ( $obstype =~ /science|raster|scan|grid|chop/ );
+
+  if ( $standard && $is_sci ) {
+    $dr = "REDUCE_STANDARD";
+  }
+
+  if ( $utdate > 20081115 && $pol && $is_sci ) {
+    $dr .= "_POL";
+  }
+
+  if( uc( $dr ) eq 'REDUCE_SCIENCE' ) {
+    $dr = 'REDUCE_SCIENCE_GRADIENT';
+  }
+
+  return $dr;
+}
+
+=item B<from_DR_RECIPE>
+
+Returns DR_RECIPE unless we have a skydip.
+
+=cut
+
+sub from_DR_RECIPE {
+  my $class = shift;
+  my $generic_headers = shift;
+  my $dr = $generic_headers->{DR_RECIPE};
+  my $ut = $generic_headers->{UTDATE};
+  if (defined $ut && $ut < 20080615) {
+    if (defined $dr && $dr eq 'REDUCE_SKYDIP') {
+      $dr = 'REDUCE_SCIENCE';
+    }
+  }
+  return ("RECIPE" => $dr);
+}
+
+=item B<to_POLARIMETER>
+
+If the polarimeter is in the beam, as denoted by the INBEAM header
+containing "POL", then this returns true. Otherwise, return false.
+
+=cut
+
+sub to_POLARIMETER {
+  my $class = shift;
+  my $FITS_headers = shift;
+
+  my $inbeam = $FITS_headers->{INBEAM};
+  my $utdate = $class->to_UTDATE( $FITS_headers );
+
+  if ( $utdate > 20081115 &&
+       defined( $inbeam ) &&
+       $inbeam =~ /pol/i ) {
+    return 1;
+  }
+  return 0;
+}
+
+=item B<from_POLARIMETER>
+
+If the POLARIMETER header is true, then return "POL" for the INBEAM
+header. Otherwise, return undef.
+
+=cut
+
+sub from_POLARIMETER {
+  my $class = shift;
+  my $generic_headers = shift;
+
+  my $pol = $generic_headers->{POLARIMETER};
+
+  if ( $pol ) {
+    return ( "INBEAM" => "POL" );
+  }
+
+  return ( "INBEAM" => undef );
+}
+
+=item B<to_SAMPLE_MODE>
+
+If the SAM_MODE value is either 'raster' or 'scan', return
+'scan'. Otherwise, return the value in lowercase.
+
+=cut
+
+sub to_SAMPLE_MODE {
+  my $self = shift;
+  my $FITS_headers = shift;
+
+  my $sam_mode;
+  if( defined( $FITS_headers->{'SAM_MODE'} ) &&
+      uc( $FITS_headers->{'SAM_MODE'} ) eq 'RASTER' ) {
+    $sam_mode = 'scan';
+  } else {
+    $sam_mode = lc( $FITS_headers->{'SAM_MODE'} );
+  }
+  return $sam_mode;
+}
+
+=item B<to_SURVEY>
+
+Checks the value of the SURVEY header and uses that. If it's
+undefined, then use the PROJECT header to determine an appropriate
+survey.
+
+=cut
+
+sub to_SURVEY {
+  my $self = shift;
+  my $FITS_headers = shift;
+
+  my $survey;
+
+  if( defined( $FITS_headers->{'SURVEY'} ) ) {
+    $survey = $FITS_headers->{'SURVEY'};
+  } else {
+
+    my $project = $FITS_headers->{'PROJECT'};
+    if( defined( $project ) ) {
+      if( $project =~ /JLS([GNS])/ ) {
+        if( $1 eq 'G' ) {
+          $survey = 'GBS';
+        } elsif( $1 eq 'N' ) {
+          $survey = 'NGS';
+        } elsif( $1 eq 'S' ) {
+          $survey = 'SLS';
+        }
+      }
+    }
+  }
+
+  return $survey;
+
+}
+
 =item B<to_EXPOSURE_TIME>
 
 Uses the to_UTSTART and to_UTEND functions to calculate the exposure
@@ -147,15 +295,76 @@ sub to_EXPOSURE_TIME {
   my $self = shift;
   my $FITS_headers = shift;
 
-  my $return;
-  if( exists( $FITS_headers->{'DATE-OBS'} ) &&
-      exists( $FITS_headers->{'DATE-END'} ) ) {
+  # force date headers to be standardized
+  $self->_fix_dates( $FITS_headers );
 
+  my $return;
+  if ( exists( $FITS_headers->{'DATE-OBS'} ) &&
+       exists( $FITS_headers->{'DATE-END'} ) ) {
     my $start = $self->to_UTSTART( $FITS_headers );
     my $end = $self->to_UTEND( $FITS_headers );
     my $duration = $end - $start;
     $return = $duration->seconds;
   }
+  return $return;
+}
+
+=item B<to_INSTRUMENT>
+
+Converts the C<INSTRUME> header into the C<INSTRUMENT> header. If the
+C<INSTRUME> header begins with "HARP" or "FE_HARP", then the
+C<INSTRUMENT> header will be set to "HARP".
+
+=cut
+
+sub to_INSTRUMENT {
+  my $self = shift;
+  my $FITS_headers = shift;
+  my $return;
+  if ( exists( $FITS_headers->{'INSTRUME'} ) ) {
+    if ( $FITS_headers->{'INSTRUME'} =~ /^HARP/ ||
+         $FITS_headers->{'INSTRUME'} =~ /^FE_HARP/ ) {
+      $return = "HARP";
+    } else {
+      $return = $FITS_headers->{'INSTRUME'};
+    }
+  }
+  return $return;
+}
+
+=item B<to_OBSERVATION_ID>
+
+Converts the C<OBSID> header directly into the C<OBSERVATION_ID>
+generic header, or if that header does not exist, converts the
+C<BACKEND>, C<OBSNUM>, and C<DATE-OBS> headers into C<OBSERVATION_ID>.
+
+=cut
+
+sub to_OBSERVATION_ID {
+  my $self = shift;
+  my $FITS_headers = shift;
+  my $return;
+  if ( exists( $FITS_headers->{'OBSID'} ) &&
+       defined( $FITS_headers->{'OBSID'} ) ) {
+    $return = $FITS_headers->{'OBSID'};
+  } else {
+    $self->_fix_dates( $FITS_headers );
+
+    my $backend = lc( $self->to_BACKEND( $FITS_headers ) );
+    my $obsnum = $self->to_OBSERVATION_NUMBER( $FITS_headers );
+    my $dateobs = $self->to_UTSTART( $FITS_headers );
+
+    if ( defined( $backend ) &&
+         defined( $obsnum ) &&
+         defined( $dateobs ) ) {
+      my $datetime = $dateobs->datetime;
+      $datetime =~ s/-//g;
+      $datetime =~ s/://g;
+
+      $return = join '_', $backend, $obsnum, $datetime;
+    }
+  }
+
   return $return;
 }
 
@@ -174,20 +383,120 @@ sub to_OBSERVATION_MODE {
   my $FITS_headers = shift;
 
   my $return;
-  if( exists( $FITS_headers->{'SAM_MODE'} ) &&
-      exists( $FITS_headers->{'SW_MODE'} ) &&
-      exists( $FITS_headers->{'OBS_TYPE'} ) ) {
+  if ( exists( $FITS_headers->{'SAM_MODE'} ) &&
+       exists( $FITS_headers->{'SW_MODE'} ) &&
+       exists( $FITS_headers->{'OBS_TYPE'} ) ) {
     my $sam_mode = $FITS_headers->{'SAM_MODE'};
     $sam_mode =~ s/\s//g;
+    $sam_mode = "raster" if $sam_mode eq "scan";
     my $sw_mode = $FITS_headers->{'SW_MODE'};
     $sw_mode =~ s/\s//g;
+
+    # handle OBS_TYPE missing
     my $obs_type = $FITS_headers->{'OBS_TYPE'};
+    $obs_type = "science" unless $obs_type;
     $obs_type =~ s/\s//g;
 
     $return = ( ( $obs_type =~ /science/i )
-              ? join '_', $sam_mode, $sw_mode
-              : join '_', $sam_mode, $sw_mode, $obs_type );
+                ? join '_', $sam_mode, $sw_mode
+                : join '_', $sam_mode, $sw_mode, $obs_type );
   }
+  return $return;
+}
+
+=item B<to_OBSERVATION_TYPE>
+
+Returns the type of observation that was done. If the OBS_TYPE header
+matches /science/, the SAM_MODE header is used: if SAM_MODE matches
+/raster/, then return 'raster'. If SAM_MODE matches /grid/, then
+return 'grid'. If SAM_MODE matches /jiggle/, then return 'jiggle'.
+
+If the OBS_TYPE header matches /focus/, then return 'focus'. If the
+OBS_TYPE header matches /pointing/, then return 'pointing'.
+
+If none of the above options hold, then return undef.
+
+=cut
+
+sub to_OBSERVATION_TYPE {
+  my $self = shift;
+  my $FITS_headers = shift;
+
+  my $return;
+  my $ot = $FITS_headers->{OBS_TYPE};
+
+  # Sometimes we lack OBS_TYPE. In that case we have to assume SCIENCE
+  # even though the headers are broken. (eg 20080509#18 RxWD)
+  $ot = "science" unless $ot;
+
+  if ( $ot ) {
+    my $obs_type = lc( $ot );
+
+    if ( $obs_type =~ /science/ ) {
+
+      if ( defined( $FITS_headers->{'SAM_MODE'} ) ) {
+
+        my $sam_mode = $FITS_headers->{'SAM_MODE'};
+
+        if ( $sam_mode =~ /raster|scan/ ) {
+          $return = "raster";
+        } elsif ( $sam_mode =~ /grid/ ) {
+          $return = "grid";
+        } elsif ( $sam_mode =~ /jiggle/ ) {
+          $return = "jiggle";
+        } else {
+          croak "Unexpected sample mode: '$sam_mode'";
+        }
+      }
+    } elsif ( $obs_type =~ /focus/ ) {
+      $return = "focus";
+    } elsif ( $obs_type =~ /pointing/ ) {
+      $return = "pointing";
+    } elsif ( $obs_type =~ /skydip/) {
+      $return = "skydip";
+    } else {
+      croak "Unexpected OBS_TYPE of '$obs_type'\n";
+    }
+  }
+
+  return $return;
+}
+
+
+=item B<to_REST_FREQUENCY>
+
+Uses an C<Starlink::AST::FrameSet> object to determine the
+frequency. If such an object is not passed in, then the rest frequency
+is set to zero.
+
+Returns the rest frequency in Hz.
+
+=cut
+
+sub to_REST_FREQUENCY {
+  my $self = shift;
+  my $FITS_headers = shift;
+  my $frameset = shift;
+
+  my $return;
+
+  if ( defined( $frameset ) &&
+       UNIVERSAL::isa( $frameset, "Starlink::AST::FrameSet" ) ) {
+    # in some rare cases restfreq is not set in the frameset
+    eval {
+       my $frequency = $frameset->Get( "restfreq" );
+       $return = $frequency * 1_000_000_000;
+    };
+  } elsif ( exists( $FITS_headers->{'RESTFREQ'} ) ||
+            ( exists( $FITS_headers->{'SUBHEADERS'} ) &&
+              exists( $FITS_headers->{'SUBHEADERS'}->[0]->{'RESTFREQ'} ) ) ) {
+
+    $return = exists( $FITS_headers->{'RESTFREQ'} ) ?
+      $FITS_headers->{'RESTFREQ'}           :
+        $FITS_headers->{'SUBHEADERS'}->[0]->{'RESTFREQ'};
+    $return *= 1_000_000_000;
+  }
+
   return $return;
 }
 
@@ -205,14 +514,34 @@ letters.
 sub to_SYSTEM_VELOCITY {
   my $self = shift;
   my $FITS_headers = shift;
+  my $frameset = shift;
 
   my $return;
-  if( exists( $FITS_headers->{'DOPPLER'} ) &&
-      exists( $FITS_headers->{'SPECSYS'} ) ) {
-    my $doppler = $FITS_headers->{'DOPPLER'};
-    my $specsys = $FITS_headers->{'SPECSYS'};
+  if ( exists( $FITS_headers->{'DOPPLER'} ) && defined $FITS_headers->{DOPPLER} ) {
+    my $doppler = uc( $FITS_headers->{'DOPPLER'} );
 
-    $return = substr( uc( $doppler ), 0, 3 ) . substr( uc( $specsys ), 0, 3 );
+    if ( defined( $frameset ) &&
+         UNIVERSAL::isa( $frameset, "Starlink::AST::FrameSet" ) ) {
+      # Sometimes we have frequency axis (rare)
+      eval {
+        my $sourcevrf = uc( $frameset->Get( "sourcevrf" ) );
+        $return = substr( $doppler, 0, 3 ) . substr( $sourcevrf, 0, 3 );
+      };
+    }
+    if (!defined $return) {
+      if ( exists( $FITS_headers->{'SPECSYS'} ) ) {
+        my $specsys = uc( $FITS_headers->{'SPECSYS'} );
+        $return = substr( $doppler, 0, 3 ) . substr( $specsys, 0, 3 );
+      } else {
+        my $specsys = '';
+        if ( $doppler eq 'RADIO' ) {
+          $specsys = 'LSRK';
+        } elsif ( $doppler eq 'OPTICAL' ) {
+          $specsys = 'HELIOCENTRIC';
+        }
+        $return = substr( $doppler, 0, 3 ) . substr( $specsys, 0, 3 );
+      }
+    }
   }
   return $return;
 }
@@ -235,29 +564,57 @@ a small fraction (~0.01) of the speed of light.
 sub to_VELOCITY {
   my $self = shift;
   my $FITS_headers = shift;
+  my $frameset = shift;
 
-  my $return;
-  if( exists( $FITS_headers->{'DOPPLER'} ) &&
-      exists( $FITS_headers->{'ZSOURCE'} ) ) {
-    my $doppler = uc( $FITS_headers->{'DOPPLER'} );
-    my $zsource = $FITS_headers->{'ZSOURCE'};
+  my $velocity = 0;
+  if ( defined( $frameset ) &&
+       UNIVERSAL::isa( $frameset, "Starlink::AST::FrameSet" ) ) {
 
-    if( $doppler eq 'REDSHIFT' ) {
-      $return = $zsource;
-    } elsif( $doppler eq 'OPTICAL' ) {
-      $return = $zsource * CLIGHT;
-    } elsif( $doppler eq 'RADIO' ) {
-      $return = ( CLIGHT * $zsource ) / ( 1 + $zsource );
+    my $sourcesys = "VRAD";
+    if ( defined( $FITS_headers->{'DOPPLER'} ) ) {
+      if ( $FITS_headers->{'DOPPLER'} =~ /rad/i ) {
+        $sourcesys = "VRAD";
+      } elsif ( $FITS_headers->{'DOPPLER'} =~ /opt/i ) {
+        $sourcesys = "VOPT";
+      } elsif ( $FITS_headers->{'DOPPLER'} =~ /red/i ) {
+        $sourcesys = "REDSHIFT";
+      }
+    }
+    # Sometimes we do not have a spec frame (broken files)
+    eval {
+      $frameset->Set( sourcesys => $sourcesys );
+      $velocity = $frameset->Get( "sourcevel" );
+    };
+  } else {
+
+    # We weren't passed a frameset, so try using other headers.
+    if ( exists( $FITS_headers->{'DOPPLER'} ) &&
+         ( exists( $FITS_headers->{'ZSOURCE'} ) ||
+           exists( $FITS_headers->{'SUBHEADERS'}->[0]->{'ZSOURCE'} ) ) ) {
+      my $doppler = uc( $FITS_headers->{'DOPPLER'} );
+      my $zsource = exists( $FITS_headers->{'ZSOURCE'} ) ?
+        $FITS_headers->{'ZSOURCE'}           :
+          $FITS_headers->{'SUBHEADERS'}->[0]->{'ZSOURCE'};
+
+      if ( $doppler eq 'REDSHIFT' ) {
+        $velocity = $zsource;
+      } elsif ( $doppler eq 'OPTICAL' ) {
+        $velocity = $zsource * CLIGHT;
+      } elsif ( $doppler eq 'RADIO' ) {
+        $velocity = ( CLIGHT * $zsource ) / ( 1 + $zsource );
+      }
     }
   }
-  return $return;
+
+  return $velocity;
 }
 
 =back
 
+
 =head1 REVISION
 
- $Id: ACSIS.pm,v 0.6 2006/02/07 03:02:44 bradc Exp $
+ $Id$
 
 =head1 SEE ALSO
 
@@ -270,7 +627,8 @@ Brad Cavanagh E<lt>b.cavanagh@jach.hawaii.eduE<gt>.
 
 =head1 COPYRIGHT
 
-Copyright (C) 2005-2006 Particle Physics and Astronomy Research Council.
+Copyright (C) 2007-2008 Science and Technology Facilities Council.
+Copyright (C) 2005-2007 Particle Physics and Astronomy Research Council.
 All Rights Reserved.
 
 This program is free software; you can redistribute it and/or modify it under

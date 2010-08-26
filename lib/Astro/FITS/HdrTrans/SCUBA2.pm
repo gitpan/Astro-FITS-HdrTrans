@@ -17,32 +17,45 @@ use warnings;
 use strict;
 use Carp;
 
-# Inherit from Base
-use base qw/ Astro::FITS::HdrTrans::Base /;
+use base qw/ Astro::FITS::HdrTrans::JCMT /;
 
 use vars qw/ $VERSION /;
 
-$VERSION = sprintf("%d.%03d", q$Revision: 1.2 $ =~ /(\d+)\.(\d+)/);
+$VERSION = "1.02";
 
-# for a constant mapping, there is no FITS header, just a generic
-# header that is constant
+# For a constant mapping, there is no FITS header, just a generic
+# header that is constant.
 my %CONST_MAP = (
-		);
+                 BACKEND    => 'SCUBA-2',
+                 DATA_UNITS => 'pW',
+                );
 
 # NULL mappings used to override base class implementations
 my @NULL_MAP = ();
 
-# unit mapping implies that the value propogates directly
-# to the output with only a keyword name change
+# Unit mapping implies that the value propogates directly
+# to the output with only a keyword name change.
 
 my %UNIT_MAP = (
-		INSTRUMENT           => "INSTRUME",
-		TELESCOPE            => "TELESCOP",
-	       );
+                FILTER               => "FILTER",
+                INSTRUMENT           => "INSTRUME",
+                DR_GROUP             => "DRGROUP",
+                DR_RECIPE            => "RECIPE",
+                OBSERVATION_TYPE     => "OBS_TYPE",
+                POLARIMETER          => 'POL_CONN',
+                UTDATE               => "UTDATE",
+                TELESCOPE            => "TELESCOP",
+               );
 
+# Values that are derived from the last subheader entry
+my %ENDOBS_MAP = (
+                  AIRMASS_END         => 'AMEND',
+                  AZIMUTH_END         => 'AZEND',
+                  ELEVATION_END       => 'ELEND',
+                 );
 
 # Create the translation methods
-__PACKAGE__->_generate_lookup_methods( \%CONST_MAP, \%UNIT_MAP, \@NULL_MAP );
+__PACKAGE__->_generate_lookup_methods( \%CONST_MAP, \%UNIT_MAP, \@NULL_MAP, \%ENDOBS_MAP );
 
 =head1 METHODS
 
@@ -57,19 +70,62 @@ C<can_translate> method.
 
   $inst = $class->this_instrument();
 
-Returns "SCUBA2".
+Returns "SCUBA-2".
 
 =cut
 
 sub this_instrument {
-  return "SCUBA2";
+  return "SCUBA-2";
+}
+
+=back
+
+=head1 COMPLEX CONVERSIONS
+
+These methods are more complicated than a simple mapping. We have to
+provide both from- and to-FITS conversions All these routines are
+methods and the to_ routines all take a reference to a hash and return
+the translated value (a many-to-one mapping) The from_ methods take a
+reference to a generic hash and return a translated hash (sometimes
+these are many-to-many)
+
+=over 4
+
+=item B<to_OBSERVATION_MODE>
+
+If Observation type is SCIENCE, return the sample mode, else
+return the sample mode and observation type. For example, "STARE",
+"SCAN", "SCAN_POINTING".
+
+Do not currently take into account polarimeter or FTS.
+
+=cut
+
+sub to_OBSERVATION_MODE {
+  my $self = shift;
+  my $FITS_headers = shift;
+
+  my $return;
+  if ( exists( $FITS_headers->{'SAM_MODE'} ) &&
+       exists( $FITS_headers->{'OBS_TYPE'} ) ) {
+    my $sam_mode = $FITS_headers->{'SAM_MODE'};
+    $sam_mode =~ s/\s//g;
+    my $obs_type = $FITS_headers->{'OBS_TYPE'};
+    $obs_type =~ s/\s//g;
+
+    $return = $sam_mode;
+    if ($obs_type !~ /science/i) {
+      $return .= "_$obs_type";
+    }
+  }
+  return $return;
 }
 
 =back
 
 =head1 REVISION
 
- $Id: SCUBA2.pm,v 1.2 2005/04/06 19:32:41 timj Exp $
+ $Id$
 
 =head1 SEE ALSO
 
@@ -86,7 +142,7 @@ All Rights Reserved.
 
 This program is free software; you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free Software
-Foundation; either version 2 of the License, or (at your option) any later
+Foundation; either Version 2 of the License, or (at your option) any later
 version.
 
 This program is distributed in the hope that it will be useful,but WITHOUT ANY
@@ -95,7 +151,7 @@ PARTICULAR PURPOSE. See the GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License along with
 this program; if not, write to the Free Software Foundation, Inc., 59 Temple
-Place,Suite 330, Boston, MA  02111-1307, USA
+Place, Suite 330, Boston, MA  02111-1307, USA.
 
 =cut
 

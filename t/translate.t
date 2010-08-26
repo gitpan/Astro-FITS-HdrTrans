@@ -1,6 +1,7 @@
 #!perl
 # Testing translation to and from FITS headers.
 
+# Copyright (C) 2009 Science and Technology Facilities Council.
 # Copyright (C) 2002-2005 Particle Physics and Astronomy Research Council.
 # All Rights Reserved.
 
@@ -21,7 +22,7 @@
 
 use strict;
 
-use Test::More tests => 15;
+use Test::More tests => 19;
 
 # Test compilation.
 require_ok( 'Astro::FITS::HdrTrans' );
@@ -45,18 +46,21 @@ ok( $push_scalar_return, "push_class with scalar" );
 my %test_header_1 = ();
 $test_header_1{'INSTRUME'} = 'IRCAM';
 $test_header_1{'OBJECT'} = 'MARS';
-$test_header_1{'OBSNUM'} = '25';
+$test_header_1{'RUN'} = '25';
 $test_header_1{'IDATE'} = '20030301';
 $test_header_1{'RUTSTART'} = "9.5333334";
 $test_header_1{'RUTEND'} = "9.5416667";
+$test_header_1{'PIXELSIZ'} = 0.081;
+$test_header_1{'DET_BIAS'} = 0.80;
 
 # Test header translation for test_header_1.
 
 my %generic_header_1 = Astro::FITS::HdrTrans::translate_from_FITS( \%test_header_1 );
 
-isa_ok( $generic_header_1{'UTDATE'}, 'Time::Piece', "UTDATE" );
+isa_ok( $generic_header_1{'UTSTART'}, 'Time::Piece', "UTSTART" );
+isa_ok( $generic_header_1{'UTEND'}, 'Time::Piece', "UTEND" );
 
-is( $generic_header_1{'UTDATE'}->year, 2003, "UTDATE year is 2003" );
+is( $generic_header_1{'UTDATE'}, 20030301, "UTDATE is 20030301" );
 
 is( $generic_header_1{'UTEND'}->minute, 32, "UTEND minute is 32" );
 
@@ -67,9 +71,10 @@ is( $generic_header_1{'OBJECT'}, 'MARS', "OBJECT is MARS" );
 my %generic_header_2 = Astro::FITS::HdrTrans::translate_from_FITS( \%test_header_1,
                                                                    prefix => 'test_' );
 
-isa_ok( $generic_header_2{'test_UTDATE'}, 'Time::Piece', "test_UTDATE" );
+isa_ok( $generic_header_2{'test_UTSTART'}, 'Time::Piece', "test_UTSTART" );
+isa_ok( $generic_header_2{'test_UTEND'}, 'Time::Piece', "test_UTEND" );
 
-is( $generic_header_2{'test_UTDATE'}->year, 2003, "test_UTDATE year is 2003");
+is( $generic_header_2{'test_UTDATE'}, 20030301, "test_UTDATE year is 20030301");
 
 is( $generic_header_2{'test_UTEND'}->minute, 32, "test_UTEND minute is 32" );
 
@@ -91,3 +96,10 @@ my %FITS_header_2 = Astro::FITS::HdrTrans::translate_to_FITS( \%generic_header_2
 is( $FITS_header_2{'IDATE'}, 20030301, "IDATE is 20030301, test_ prefix" );
 
 cmp_ok( abs( $FITS_header_2{'RUTSTART'} - 9.5333 ), '<', 0.0001, "RUTSTART is \"close\" to 9.5333, test_ prefix" );
+
+# Test that we can translate after explicit clean
+my %cleaned = Astro::FITS::HdrTrans::clean_prefix( \%generic_header_2, "test_" );
+my $class = Astro::FITS::HdrTrans::determine_class( \%cleaned, undef, 0 );
+is( $class, "Astro::FITS::HdrTrans::IRCAM", "Translation class after cleaning" );
+my %inst = $class->from_INSTRUMENT( \%cleaned );
+is( $inst{INSTRUME}, "IRCAM", "Get instrument from prefix translation");

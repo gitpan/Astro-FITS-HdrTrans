@@ -1,5 +1,3 @@
-# -*-perl-*-
-
 package Astro::FITS::HdrTrans::UKIRTDB;
 
 =head1 NAME
@@ -28,18 +26,18 @@ use Carp;
 use Time::Piece;
 
 # Inherit from Base
-use base qw/ Astro::FITS::HdrTrans::Base /;
+use base qw/ Astro::FITS::HdrTrans::JAC /;
 
 use vars qw/ $VERSION /;
 
 # Note that we use %02 not %03 because of historical reasons
-$VERSION = sprintf("%d.%02d", q$Revision: 1.25 $ =~ /(\d+)\.(\d+)/);
+$VERSION = "1.02";
 
 # for a constant mapping, there is no FITS header, just a generic
 # header that is constant
 my %CONST_MAP = (
-		 COORDINATE_UNITS => 'degrees',
-		);
+                 COORDINATE_UNITS => 'degrees',
+                );
 
 # NULL mappings used to override base class implementations
 my @NULL_MAP = ();
@@ -48,46 +46,47 @@ my @NULL_MAP = ();
 # to the output with only a keyword name change
 
 my %UNIT_MAP = (
-		AIRMASS_START        => "AMSTART",
-		AIRMASS_END          => "AMEND",
-		CAMERA               => "CAMLENS",
-    CAMERA_NUMBER        => "CAMNUM",
-		CONFIGURATION_INDEX  => "CNFINDEX",
-		DEC_BASE             => "DECBASE",
-		DEC_SCALE            => "PIXELSIZ",
-		DEC_TELESCOPE_OFFSET => "DECOFF",
-		DETECTOR_READ_TYPE   => "MODE",
-		DR_GROUP             => "GRPNUM",
-		DR_RECIPE            => "RECIPE",
-		EQUINOX              => "EQUINOX",
-		FILTER               => "FILTER",
-		GAIN                 => "DEPERDN",
-		GRATING_DISPERSION   => "GDISP",
-		GRATING_ORDER        => "GORDER",
-		INSTRUMENT           => "INSTRUME",
-		MSBID                => "MSBID",
-		NUMBER_OF_EXPOSURES  => "NEXP",
-		OBJECT               => "OBJECT",
-		OBSERVATION_MODE     => "INSTMODE",
-		OBSERVATION_NUMBER   => "RUN",
-		OBSERVATION_TYPE     => "OBSTYPE",
-		PROJECT              => "PROJECT",
-		RA_SCALE             => "PIXELSIZ",
-		RA_TELESCOPE_OFFSET  => "RAOFF",
-		TELESCOPE            => "TELESCOP",
-		WAVEPLATE_ANGLE      => "WPLANGLE",
-		Y_BASE               => "DECBASE",
-		X_DIM                => "DCOLUMNS",
-		Y_DIM                => "DROWS",
-		X_OFFSET             => "RAOFF",
-		Y_OFFSET             => "DECOFF",
-		X_SCALE              => "PIXELSIZ",
-		Y_SCALE              => "PIXELSIZ",
-		X_LOWER_BOUND        => "RDOUT_X1",
-		X_UPPER_BOUND        => "RDOUT_X2",
-		Y_LOWER_BOUND        => "RDOUT_Y1",
-		Y_UPPER_BOUND        => "RDOUT_Y2"
-	       );
+                AIRMASS_START        => "AMSTART",
+                AIRMASS_END          => "AMEND",
+                CAMERA               => "CAMLENS",
+                CAMERA_NUMBER        => "CAMNUM",
+                CONFIGURATION_INDEX  => "CNFINDEX",
+                DEC_BASE             => "DECBASE",
+                DEC_SCALE            => "PIXELSIZ",
+                DEC_TELESCOPE_OFFSET => "DECOFF",
+                DETECTOR_READ_TYPE   => "MODE",
+                DR_GROUP             => "GRPNUM",
+                DR_RECIPE            => "RECIPE",
+                EQUINOX              => "EQUINOX",
+                FILTER               => "FILTER",
+                FILENAME             => "FILENAME",
+                GAIN                 => "DEPERDN",
+                GRATING_DISPERSION   => "GDISP",
+                GRATING_ORDER        => "GORDER",
+                INSTRUMENT           => "INSTRUME",
+                NUMBER_OF_COADDS => 'NEXP',
+                NUMBER_OF_EXPOSURES  => "NEXP",
+                OBJECT               => "OBJECT",
+                OBSERVATION_MODE     => "INSTMODE",
+                OBSERVATION_NUMBER   => "RUN",
+                OBSERVATION_TYPE     => "OBSTYPE",
+                PROJECT              => "PROJECT",
+                RA_SCALE             => "PIXELSIZ",
+                RA_TELESCOPE_OFFSET  => "RAOFF",
+                TELESCOPE            => "TELESCOP",
+                WAVEPLATE_ANGLE      => "WPLANGLE",
+                Y_BASE               => "DECBASE",
+                X_DIM                => "DCOLUMNS",
+                Y_DIM                => "DROWS",
+                X_OFFSET             => "RAOFF",
+                Y_OFFSET             => "DECOFF",
+                X_SCALE              => "PIXELSIZ",
+                Y_SCALE              => "PIXELSIZ",
+                X_LOWER_BOUND        => "RDOUT_X1",
+                X_UPPER_BOUND        => "RDOUT_X2",
+                Y_LOWER_BOUND        => "RDOUT_Y1",
+                Y_UPPER_BOUND        => "RDOUT_Y2"
+               );
 
 
 # Create the translation methods
@@ -98,22 +97,29 @@ __PACKAGE__->_generate_lookup_methods( \%CONST_MAP, \%UNIT_MAP, \@NULL_MAP );
 
 =over 4
 
-=item B<this_instrument>
+=item B<can_translate>
 
-The name of the instrument required to match (case insensitively)
-against the INSTRUME/INSTRUMENT keyword to allow this class to
-translate the specified headers. Called by the default
-C<can_translate> method.
+Determine if this class can handle the translation. Returns true
+if the TELESCOP is "UKIRT" and there is a "FILENAME" key and 
+a "RAJ2000" key. These keywords allow the DB results to be disambiguated
+from the actual file headers.
 
-  $inst = $class->this_instrument();
-
-Returns "UFTI".
+  $cando = $class->can_translate( \%hdrs );
 
 =cut
 
-sub this_instrument {
-  return "UKIRTDB";
+sub can_translate {
+  my $self = shift;
+  my $FITS_headers = shift;
+  if (exists $FITS_headers->{TELESCOP}
+      && $FITS_headers->{TELESCOP} =~ /UKIRT/
+      && exists $FITS_headers->{FILENAME}
+      && exists $FITS_headers->{RAJ2000}) {
+    return 1;
+  }
 }
+
+=back
 
 =head1 COMPLEX CONVERSIONS
 
@@ -126,9 +132,9 @@ these are many-to-many)
 
 =over 4
 
-=item B<to_INST-DHS>
+=item B<to_INST_DHS>
 
-Sets the INST-DHS header.
+Sets the INST_DHS header.
 
 =cut
 
@@ -137,13 +143,13 @@ sub to_INST_DHS {
   my $FITS_headers = shift;
   my $return;
 
-  if( exists( $FITS_headers->{DHSVER} ) ) {
+  if ( exists( $FITS_headers->{DHSVER} ) ) {
     $FITS_headers->{DHSVER} =~ /^(\w+)/;
     my $dhs = uc($1);
-    $return = $FITS_headers->{TEMP_INST} . "_$dhs";
+    $return = $FITS_headers->{INSTRUME} . "_$dhs";
   } else {
     my $dhs = "UKDHS";
-    $return = $FITS_headers->{TEMP_INST} . "_$dhs";
+    $return = $FITS_headers->{INSTRUME} . "_$dhs";
   }
 
   return $return;
@@ -162,11 +168,11 @@ sub to_EXPOSURE_TIME {
   my $FITS_headers = shift;
   my $return;
 
-  if( exists( $FITS_headers->{'EXPOSED'} ) && defined( $FITS_headers->{'EXPOSED'} ) ) {
+  if ( exists( $FITS_headers->{'EXPOSED'} ) && defined( $FITS_headers->{'EXPOSED'} ) ) {
     $return = $FITS_headers->{'EXPOSED'};
-  } elsif( exists( $FITS_headers->{'DEXPTIME'} ) && defined( $FITS_headers->{'DEXPTIME'} ) ) {
+  } elsif ( exists( $FITS_headers->{'DEXPTIME'} ) && defined( $FITS_headers->{'DEXPTIME'} ) ) {
     $return = $FITS_headers->{'DEXPTIME'};
-  } elsif( exists( $FITS_headers->{'EXP_TIME'} ) && defined( $FITS_headers->{'EXP_TIME'} ) ) {
+  } elsif ( exists( $FITS_headers->{'EXP_TIME'} ) && defined( $FITS_headers->{'EXP_TIME'} ) ) {
     $return = $FITS_headers->{'EXP_TIME'};
   }
   return $return;
@@ -183,8 +189,8 @@ sub to_COORDINATE_TYPE {
   my $self = shift;
   my $FITS_headers = shift;
   my $return;
-  if(exists($FITS_headers->{EQUINOX})) {
-    if($FITS_headers->{EQUINOX} =~ /1950/) {
+  if (exists($FITS_headers->{EQUINOX})) {
+    if ($FITS_headers->{EQUINOX} =~ /1950/) {
       $return = "B1950";
     } elsif ($FITS_headers->{EQUINOX} =~ /2000/) {
       $return = "J2000";
@@ -201,9 +207,9 @@ sub to_GRATING_NAME {
   my $self = shift;
   my $FITS_headers = shift;
   my $return;
-  if(exists($FITS_headers->{GRATING})) {
+  if (exists($FITS_headers->{GRATING})) {
     $return = $FITS_headers->{GRATING};
-  } elsif(exists($FITS_headers->{GRISM})) {
+  } elsif (exists($FITS_headers->{GRISM})) {
     $return = $FITS_headers->{GRISM};
   }
   return $return;
@@ -217,9 +223,9 @@ sub to_GRATING_WAVELENGTH {
   my $self = shift;
   my $FITS_headers = shift;
   my $return;
-  if(exists($FITS_headers->{GLAMBDA})) {
+  if (exists($FITS_headers->{GLAMBDA})) {
     $return = $FITS_headers->{GLAMBDA};
-  } elsif(exists($FITS_headers->{CENWAVL})) {
+  } elsif (exists($FITS_headers->{CENWAVL})) {
     $return = $FITS_headers->{CENWAVL};
   }
   return $return;
@@ -236,9 +242,9 @@ sub to_SLIT_ANGLE {
   my $self = shift;
   my $FITS_headers = shift;
   my $return;
-  if(exists($FITS_headers->{'SANGLE'})) {
+  if (exists($FITS_headers->{'SANGLE'})) {
     $return = $FITS_headers->{'SANGLE'};
-  } elsif(exists($FITS_headers->{'SLIT_PA'} )) {
+  } elsif (exists($FITS_headers->{'SLIT_PA'} )) {
     $return = $FITS_headers->{'SLIT_PA'};
   }
   return $return;
@@ -256,9 +262,9 @@ sub to_SLIT_NAME {
   my $self = shift;
   my $FITS_headers = shift;
   my $return;
-  if(exists($FITS_headers->{'SLIT'})) {
+  if (exists($FITS_headers->{'SLIT'})) {
     $return = $FITS_headers->{'SLIT'};
-  } elsif(exists($FITS_headers->{'SLITNAME'} )) {
+  } elsif (exists($FITS_headers->{'SLITNAME'} )) {
     $return = $FITS_headers->{'SLITNAME'};
   }
   return $return;
@@ -274,10 +280,10 @@ sub to_SPEED_GAIN {
   my $FITS_headers = shift;
   my $return;
 
-  if( exists( $FITS_headers->{'SPD_GAIN'} ) ) {
+  if ( exists( $FITS_headers->{'SPD_GAIN'} ) ) {
     $return = $FITS_headers->{'SPD_GAIN'};
-  } elsif( exists( $FITS_headers->{'WAVEFORM'} ) ) {
-    if( $FITS_headers->{'WAVEFORM'} =~ /^thermal/i ) {
+  } elsif ( exists( $FITS_headers->{'WAVEFORM'} ) ) {
+    if ( $FITS_headers->{'WAVEFORM'} =~ /thermal/i ) {
       $return = 'thermal';
     } else {
       $return = 'normal';
@@ -302,24 +308,24 @@ sub to_STANDARD {
 
   # Set false as default so we do not have to repeat this in the logic
   # below (could just use undef == false)
-  my $return = 0; # default false
+  my $return = 0;               # default false
 
-  if( exists( $FITS_headers->{'STANDARD'} ) &&
-      length( $FITS_headers->{'STANDARD'} . "") > 0 ) {
+  if ( exists( $FITS_headers->{'STANDARD'} ) &&
+       length( $FITS_headers->{'STANDARD'} . "") > 0 ) {
 
-    if($FITS_headers->{'STANDARD'} =~ /^[tf]$/i) {
+    if ($FITS_headers->{'STANDARD'} =~ /^[tf]$/i) {
       # Raw header read from FITS header
       $return = (uc($FITS_headers->{'STANDARD'}) eq 'T');
-    } elsif($FITS_headers->{'STANDARD'} =~ /^[01]$/) {
+    } elsif ($FITS_headers->{'STANDARD'} =~ /^[01]$/) {
       # Translated header either so a true logical
       $return = $FITS_headers->{'STANDARD'};
     }
 
   } elsif ( ( exists $FITS_headers->{OBJECT} &&
-	      $FITS_headers->{'OBJECT'} =~ /^[bf]s/i ) ||
-	    ( exists( $FITS_headers->{'RECIPE'} ) &&
-	      $FITS_headers->{'RECIPE'} =~ /^standard/i
-	    )) {
+              $FITS_headers->{'OBJECT'} =~ /^[bf]s/i ) ||
+            ( exists( $FITS_headers->{'RECIPE'} ) &&
+              $FITS_headers->{'RECIPE'} =~ /^standard/i
+            )) {
     # Either we have an object with name prefix of BS or FS or
     # our recipe looks suspiciously like a standard.
     $return = 1;
@@ -339,8 +345,9 @@ sub to_UTDATE {
   my $FITS_headers = shift;
   my $return;
 
-  if( exists( $FITS_headers->{'UT_DATE'} ) ) {
+  if ( exists( $FITS_headers->{'UT_DATE'} ) ) {
     $return = Time::Piece->strptime( $FITS_headers->{'UT_DATE'}, "%b %d %Y %I:%M%p" );
+    $return = $return->strftime('%Y%m%d');
   }
 
   return $return;
@@ -360,21 +367,18 @@ sub to_UTSTART {
   my $FITS_headers = shift;
   my $return;
 
-  if( exists( $FITS_headers->{'DATE_OBS'} ) ) {
+  if ( exists( $FITS_headers->{'DATE_OBS'} ) ) {
     my $dateobs = $FITS_headers->{'DATE_OBS'};
-    $dateobs =~ s/Z//g;
-    $dateobs =~ s/\.\d*$//;
-
-    $return = Time::Piece->strptime( $dateobs, "%Y-%m-%dT%T" );
-
-  } elsif(exists($FITS_headers->{'UT_DATE'}) && defined($FITS_headers->{'UT_DATE'}) &&
-          exists($FITS_headers->{'RUTSTART'}) && defined( $FITS_headers->{'RUTSTART'} ) ) {
-    # The UT_DATE is returned in the form "mmm dd yyyy hh:mm(am|pm)"
-    my $t = Time::Piece->strptime($FITS_headers->{'UT_DATE'}, "%b %d %Y %I:%M%p");
+    $return = $self->_parse_iso_date( $dateobs );
+  } elsif (exists($FITS_headers->{'UT_DATE'}) && defined($FITS_headers->{'UT_DATE'}) &&
+           exists($FITS_headers->{'RUTSTART'}) && defined( $FITS_headers->{'RUTSTART'} ) ) {
+    # Use the default UTDATE translation but insert "-" for ISO parsing
+    my $ut = $self->to_UTDATE($FITS_headers);
+    $ut = join("-", substr($ut,0,4), substr($ut,4,2), substr($ut,6,2));
     my $hour = int($FITS_headers->{'RUTSTART'});
     my $minute = int( ( $FITS_headers->{'RUTSTART'} - $hour ) * 60 );
     my $second = int( ( ( ( $FITS_headers->{'RUTSTART'} - $hour ) * 60) - $minute ) * 60 );
-    $return = Time::Piece->strptime( $t->ymd . "T$hour:$minute:$second", "%Y-%m-%dT%T" );
+    $return = $self->_parse_iso_date( $ut . "T$hour:$minute:$second" );
   }
 
   return $return;
@@ -391,7 +395,7 @@ sub from_UTSTART {
   my $self = shift;
   my $generic_headers = shift;
   my %return_hash;
-  if(exists($generic_headers->{UTSTART})) {
+  if (exists($generic_headers->{UTSTART})) {
     my $t = _parse_date( $generic_headers->{'UTSTART'} );
     my $month = $t->month;
     $month =~ /^(.{3})/;
@@ -416,20 +420,18 @@ sub to_UTEND {
   my $FITS_headers = shift;
   my $return;
 
-  if( exists( $FITS_headers->{'DATE_END'} ) ) {
+  if ( exists( $FITS_headers->{'DATE_END'} ) ) {
     my $dateend = $FITS_headers->{'DATE_END'};
-    $dateend =~ s/Z//g;
-    $dateend =~ s/\.\d*$//;
-    $return = Time::Piece->strptime( $dateend, "%Y-%m-%dT%T" );
-
-  } elsif(exists($FITS_headers->{'UT_DATE'}) && defined($FITS_headers->{'UT_DATE'}) &&
-          exists($FITS_headers->{'RUTEND'}) && defined( $FITS_headers->{'RUTEND'} ) ) {
-    # The UT_DATE is returned in the form "mmm dd yyyy hh:mm(am|pm)"
-    my $t = Time::Piece->strptime($FITS_headers->{'UT_DATE'}, "%b %d %Y %I:%M%p");
+    $return = $self->_parse_iso_date( $dateend );
+  } elsif (exists($FITS_headers->{'UT_DATE'}) && defined($FITS_headers->{'UT_DATE'}) &&
+           exists($FITS_headers->{'RUTEND'}) && defined( $FITS_headers->{'RUTEND'} ) ) {
+    # Use the default UTDATE translation but insert "-" for ISO parsing
+    my $ut = $self->to_UTDATE($FITS_headers);
+    $ut = join("-", substr($ut,0,4), substr($ut,4,2), substr($ut,6,2));
     my $hour = int($FITS_headers->{'RUTEND'});
     my $minute = int( ( $FITS_headers->{'RUTEND'} - $hour ) * 60 );
     my $second = int( ( ( ( $FITS_headers->{'RUTEND'} - $hour ) * 60) - $minute ) * 60 );
-    $return = Time::Piece->strptime( $t->ymd . "T$hour:$minute:$second", "%Y-%m-%dT%T" );
+    $return = $self->_parse_iso_date( $ut . "T$hour:$minute:$second" );
   }
 
   return $return;
@@ -446,7 +448,7 @@ sub from_UTEND {
   my $self = shift;
   my $generic_headers = shift;
   my %return_hash;
-  if(exists($generic_headers->{UTEND})) {
+  if (exists($generic_headers->{UTEND})) {
     my $t = _parse_date( $generic_headers->{'UTEND'} );
     my $month = $t->month;
     $month =~ /^(.{3})/;
@@ -469,7 +471,7 @@ sub to_X_BASE {
   my $self = shift;
   my $FITS_headers = shift;
   my $return;
-  if(exists($FITS_headers->{RABASE})) {
+  if (exists($FITS_headers->{RABASE})) {
     $return = $FITS_headers->{RABASE} * 15;
   }
   return $return;
@@ -486,7 +488,7 @@ sub from_X_BASE {
   my $self = shift;
   my $generic_headers = shift;
   my %return_hash;
-  if(exists($generic_headers->{X_BASE})) {
+  if (exists($generic_headers->{X_BASE})) {
     $return_hash{'RABASE'} = $generic_headers->{X_BASE} / 15;
   }
   return %return_hash;
@@ -503,7 +505,7 @@ sub to_RA_BASE {
   my $self = shift;
   my $FITS_headers = shift;
   my $return;
-  if(exists($FITS_headers->{RABASE})) {
+  if (exists($FITS_headers->{RABASE})) {
     $return = $FITS_headers->{RABASE} * 15;
   }
   return $return;
@@ -520,7 +522,7 @@ sub from_RA_BASE {
   my $self = shift;
   my $generic_headers = shift;
   my %return_hash;
-  if(exists($generic_headers->{RA_BASE})) {
+  if (exists($generic_headers->{RA_BASE})) {
     $return_hash{'RABASE'} = $generic_headers->{RA_BASE} / 15;
   }
   return %return_hash;
@@ -528,13 +530,28 @@ sub from_RA_BASE {
 
 =back
 
-          );
-
-=back
-
 =head1 INTERNAL METHODS
 
 =over 4
+
+Handle the case where DATE_OBS and/or DATE_END are given, and convert
+them into DATE-OBS and/or DATE-END.
+
+=item B<_fix_dates>
+
+=cut
+
+sub _fix_dates {
+  my ( $class, $FITS_headers ) = @_;
+
+  if( defined( $FITS_headers->{'DATE_OBS'} ) ) {
+    $FITS_headers->{'DATE-OBS'} = $class->_parse_iso_date( $FITS_headers->{'DATE_OBS'} );
+  }
+  if( defined( $FITS_headers->{'DATE_END'} ) ) {
+    $FITS_headers->{'DATE-END'} = $class->_parse_iso_date( $FITS_headers->{'DATE_END'} );
+  }
+
+}
 
 =item B<_parse_date>
 
@@ -587,7 +604,7 @@ sub _parse_date {
   } else {
     # Assume Sybase date
     # Mar 15 2002  7:04AM
-    $format = "%b%t%d%t%Y%t%I:%M%p";
+    $format = "%b %d %Y %I:%M%p";
 
   }
 
@@ -618,7 +635,7 @@ sub _parse_date {
 
 =head1 REVISION
 
- $Id: UKIRTDB.pm,v 1.25 2005/05/26 23:39:57 bradc Exp $
+ $Id$
 
 =head1 SEE ALSO
 
@@ -632,6 +649,7 @@ Tim Jenness E<lt>t.jenness@jach.hawaii.eduE<gt>
 
 =head1 COPYRIGHT
 
+Copyright (C) 2007-2008 Science and Technology Facilities Council.
 Copyright (C) 2002-2005 Particle Physics and Astronomy Research Council.
 All Rights Reserved.
 

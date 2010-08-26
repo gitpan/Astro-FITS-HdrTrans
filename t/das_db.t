@@ -2,23 +2,28 @@
 
 use strict;
 
-use Test::More tests => 15;
+use Test::More tests => 14;
 
 require_ok( 'Astro::FITS::HdrTrans' );
 
 my %header = ();
 $header{'LONGDATE'} = "Feb  3 2006  6:29:00:234AM ";
+$header{SCAN} = 22;
 $header{'NORSECT'} = 4;
 $header{'NOFCHAN'} = 2;
 $header{'NOBCHAN'} = 2048;
 $header{'OBSMODE'} = 'sample';
 $header{'CYCLLEN'} = 60;
 $header{'FRONTEND'} = 'rxb';
+$header{'BACKEND'} = 'DAS';
 $header{'SWMODE'} = 'beamswitch';
 $header{'NSCAN'} = 1;
 $header{'NCYCLE'} = 2;
 $header{'VDEF'} = 'radio';
 $header{'VREF'} = 'lsr';
+$header{'INSTRUME'} = 'JCMT_GSD_DB';
+$header{'GSDFILE'} = "xxx";
+$header{'SCA#'} = 52;
 
 my %generic_header = Astro::FITS::HdrTrans::translate_from_FITS( \%header );
 
@@ -29,8 +34,7 @@ is( $generic_header{'EQUINOX'}, "current", "EQUINOX constant mapping is current"
 is( $generic_header{'TELESCOPE'}, "JCMT", "TELESCOPE constant mapping is JCMT" );
 
 # Test computed headers.
-isa_ok( $generic_header{'UTDATE'}, "Time::Piece", "UTDATE" );
-is( $generic_header{'UTDATE'}, "Fri Feb  3 00:00:00 2006", "UTDATE stringifies to Fri Feb  3 00:00:00 2006" );
+is( $generic_header{'UTDATE'}, 20060203, "UTDATE 20060203");
 isa_ok( $generic_header{'UTSTART'}, "Time::Piece", "UTSTART" );
 is( $generic_header{'UTSTART'}, "Fri Feb  3 06:29:00 2006", "UTSTART stringifies to Fri Feb  3 06:29:00 2006" );
 isa_ok( $generic_header{'UTEND'}, "Time::Piece", "UTEND" );

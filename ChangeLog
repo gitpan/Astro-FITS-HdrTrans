@@ -1,3 +1,28 @@
+2010-08-26  Brad Cavanagh <brad.cavanagh@gmail.com>
+
+	* CPAN release.
+
+2009-09-17  Brad Cavanagh <b.cavanagh@jach.hawaii.edu>
+
+	* ACSIS.pm: If the RECIPE FITS header is REDUCE_SCIENCE, translate
+	this to REDUCE_SCIENCE_GRADIENT.
+
+2009-01-23  Brad Cavanagh <b.cavanagh@jach.hawaii.edu>
+
+  * Increase version to 1.01.
+
+	* CGS4 has been split into CGS4Old and CGS4New to accomodate for new
+	DHS.
+
+2006-07-21 Brad Cavanagh <b.cavanagh@jach.hawaii.edu>
+
+	* Add lib/Astro/FITS/HdrTrans/JAC.pm module to act as base class
+	for JAC instruments.
+
+	* Add OBSERVATION_ID generic header.
+
+	* Add tests for CGS4, SCUBA.
+
 2006-01-30  Brad Cavanagh <b.cavanagh@jach.hawaii.edu>
 
 	* lib/Astro/FITS/HdrTrans/ACSIS.pm: Modify OBSERVATION_MODE

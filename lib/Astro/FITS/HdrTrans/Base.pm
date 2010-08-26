@@ -1,5 +1,3 @@
-# -*-perl-*-
-
 package Astro::FITS::HdrTrans::Base;
 
 =head1 NAME
@@ -28,11 +26,12 @@ use 5.006;
 use strict;
 use warnings;
 use Carp;
+use Math::Trig qw/ deg2rad /;
 
 use vars qw/ $VERSION /;
-use Astro::FITS::HdrTrans (); # for the generic header list
+use Astro::FITS::HdrTrans ();   # for the generic header list
 
-$VERSION = sprintf("%d.%03d", q$Revision: 1.6 $ =~ /(\d+)\.(\d+)/);
+$VERSION = "1.02";
 
 =head1 PUBLIC METHODS
 
@@ -45,10 +44,13 @@ outside of the hash argument.
 
 Do the header translation from FITS for the specified class.
 
-  %generic = $class->translate_to_FITS( \%fitshdr, $prefix );
+  %generic = $class->translate_to_FITS( \%fitshdr,
+                                        prefix => $prefix,
+                                        frameset => $wcs,
+                                     );
 
 Prefix is attached to the keys in the returned hash if it
-is defined.
+is defined. The frameset is an optional Starlink::AST object.
 
 If a translation results in an undefined value (for example, if the
 headers can represent both imaging and spectroscopy there may be no
@@ -59,14 +61,30 @@ A list of failed translations is available in the _UNDEFINED_TRANSLATIONS
 key in the generic hash. This points to a reference to an array of all
 the failed generic translations.
 
+The class used for the translation is stored in the key _TRANSLATION_CLASS.
+This can then be used to reverse the translation without having to
+re-scan the headers.
+
 =cut
 
 sub translate_from_FITS {
   my $class = shift;
   my $FITS = shift;
-  my $prefix = shift || '';
+  my %opts = @_;
 
-  croak "translate_to_FITS: Not a hash reference!"
+  my $prefix = '';
+  if ( exists( $opts{prefix} ) &&
+       defined( $opts{prefix} ) ) {
+    $prefix = $opts{prefix};
+  }
+
+  my $frameset;
+  if ( exists( $opts{frameset} ) &&
+       defined( $opts{frameset} ) ) {
+    $frameset = $opts{frameset};
+  }
+
+  croak "translate_from_FITS: Not a hash reference!"
     unless (ref($FITS) && ref($FITS) eq 'HASH');
 
   # Now we need to loop over the known generic headers
@@ -78,17 +96,20 @@ sub translate_from_FITS {
   for my $g (@GEN) {
     my $method = "to_$g";
     if ($class->can( $method )) {
-      my $result = $class->$method( $FITS );
+      my $result = $class->$method( $FITS, $frameset );
       if (defined $result) {
-	$generic{"$prefix$g"} = $result;
+        $generic{"$prefix$g"} = $result;
       } else {
-	push(@failed, $g);
+        push(@failed, $g);
       }
     }
   }
 
   # store the failed translations (if we had any)
   $generic{_UNDEFINED_TRANSLATIONS} = \@failed if @failed;
+
+  # store the translation class
+  $generic{_TRANSLATION_CLASS} = $class;
 
   return %generic;
 }
@@ -142,7 +163,7 @@ Returns true if the supplied headers can be handled by this class.
 
 The base class version of this method returns true if either the C<INSTRUME>
 or C<INSTRUMENT> key exist and match the value returned by the
-C<ref_instrument> method. Comparisons are case-insensitive and can use
+C<this_instrument> method. Comparisons are case-insensitive and can use
 regular expressions on instrument name if provided by the base class.
 
 
@@ -158,7 +179,10 @@ sub can_translate {
 
   # For consistency in subsequent algorithm convert
   # a string to a pattern match object
-  $ref = qr/^$ref$/i if not ref($ref);
+  if (not ref($ref)) { 
+    $ref = quotemeta($ref);
+    $ref = qr/^$ref$/i;
+  }
 
   # check against the FITS and Generic versions.
   my $inst;
@@ -224,16 +248,29 @@ second is a reference to a hash with unit mappings (both from and to
 methods are created). The methods are placed into the package given
 by the class supplied to the method.
 
+  Astro::FITS::HdrTrans::UKIRT->_generate_lookup_methods( \%const, \%unit, \%null);
+
 Additionally, an optional third argument can be used to indicate
 methods that should be null translations. This is a reference to an array
 of generic keywords and should be used in the rare cases when a base
 class implementation should be nullified. This will result in undefined
 values in the generic hash but no value in the generic to FITS mapping.
 
+A fourth optional argument can specify those unit mappings that should
+use the final entry in a subheader (if a subheader is present). Mainly
+associated with END events such as AIRMASS_END or ELEVATION_END.
+
+  Astro::FITS::HdrTrans::UKIRT->_generate_lookup_methods( \%const, \%unit,
+                                                          \%null, \%endobs);
+
 These methods will have the standard interface of
 
   $generic = $class->_to_GENERIC_NAME( \%fits );
   %fits = $class->_from_GENERIC_NAME( \%generic );
+
+Generic unit map translations use the via_subheader() method in scalar
+context and so will retrieve the first sub header value if the keyword
+is not present in the primary header.
 
 =cut
 
@@ -242,10 +279,11 @@ sub _generate_lookup_methods {
   my $const = shift;
   my $unit  = shift;
   my $null  = shift;
+  my $endobs = shift;
 
- # Have to go into a different package
+  # Have to go into a different package
   my $p = "{\n package $class;\n";
-  my $ep = "\n}"; # close the scope
+  my $ep = "\n}";               # close the scope
 
   # Loop over the keys to the unit mapping hash
   # The keys are the GENERIC name
@@ -258,7 +296,7 @@ sub _generate_lookup_methods {
 
     # First generate the code to generate Generic headers
     my $subname = "to_$key";
-    my $sub = qq/ $p sub $subname { \$_[1]->{\"$fhdr\"}; } $ep /;
+    my $sub = qq/ $p sub $subname { scalar \$_[0]->via_subheader_undef_check(\$_[1],\"$fhdr\"); } $ep /;
     eval "$sub";
     #print "Sub: $sub\n";
 
@@ -279,7 +317,7 @@ sub _generate_lookup_methods {
     eval "$sub";
   }
 
-  # finally the null mappings
+  # the null mappings
   if (defined $null) {
     for my $key (@$null) {
       # to generic
@@ -294,6 +332,237 @@ sub _generate_lookup_methods {
     }
   }
 
+  # the mappings that are unit mappings but from the end of a subheader
+  # group (eg ELEVATION_END)
+  if (defined $endobs) {
+    for my $key (keys %$endobs) {
+
+      # Get the original FITS header name
+      my $fhdr = $endobs->{$key};
+
+      # print "Processing $key and $ohdr and $fhdr\n";
+
+      # First generate the code to generate Generic headers
+      my $subname = "to_$key";
+      my $sub = qq/ $p sub $subname {
+	  my \@allresults = \$_[0]->via_subheader_undef_check(\$_[1],\"$fhdr\");
+          return \$allresults[-1];
+        } $ep /;
+      eval "$sub";
+      #print "Sub: $sub\n";
+
+      # Now the from
+      $subname = "from_$key";
+      $sub = qq/ $p sub $subname { (\"$fhdr\", \$_[1]->{\"$key\"}); } $ep/;
+      eval "$sub";
+      #print "Sub: $sub\n";
+
+    }
+  }
+
+}
+
+=item B<nint>
+
+Return the nearest integer to a supplied floating point
+value. 0.5 is rounded up.
+
+  $int = Astro::FITS::HdrTrans->nint( $value );
+
+=cut
+
+sub nint {
+  my $class = shift;
+  my $value = shift;
+
+  if ($value >= 0) {
+    return (int($value + 0.5));
+  } else {
+    return (int($value - 0.5));
+  }
+}
+
+=item B<_parse_iso_date>
+
+Converts a UT date in form YYYY-MM-DDTHH:MM:SS.sss into a date
+object (Time::Piece).
+
+  $object = $trans->_parse_iso_date( $date );
+
+=cut
+
+sub _parse_iso_date {
+  my $self = shift;
+  my $datestr = shift;
+  my $return;
+  if (defined $datestr) {
+    # Not part of standard but we can deal with it
+    $datestr =~ s/Z//g;
+    # Time::Piece can not do fractional seconds. Should switch to DateTime
+    $datestr =~ s/\.\d+$//;
+    # parse
+    $return = Time::Piece->strptime( $datestr, "%Y-%m-%dT%T" );
+  }
+  return $return;
+}
+
+=item B<_parse_yyyymmdd_date>
+
+Converts a UT date in format YYYYMMDD into a date object.
+
+  $ojbect = $trans->_parse_yyyymmdd_date( $date, $sep );
+
+Where $sep is the separator string and can be an empty string.
+This allows 20090215, 2009-02-15 and 2009:02:15 to be parsed
+by the same routine by using '', '-' and ':' respectively.
+
+=cut
+
+sub _parse_yyyymmdd_date {
+  my $self = shift;
+  my $datestr = shift;
+  my $sep = shift;
+  $sep = '' unless defined $sep;
+
+  # OSX Leopard has a completely broken strptime that can not
+  # handle %Y%m%d. We need to change the string to make it
+  # into a parseable form (or switch to DateTime).
+  if (!$sep) {
+    $sep = "-";
+    $datestr = join($sep, substr($datestr,0,4),
+                    substr($datestr,4,2),
+                   substr($datestr,6));
+  }
+
+  return Time::Piece->strptime( $datestr,join($sep,'%Y','%m','%d') );
+}
+
+=item B<_add_seconds>
+
+Add the supplied number of seconds to the supplied time object
+and return a new object.
+
+  $new = $trans->_add_seconds( $base, $delta );
+
+=cut
+
+sub _add_seconds {
+  my $self = shift;
+  my $base = shift;
+  my $delta = shift;
+  return ($base + Time::Seconds->new( $delta ) );
+}
+
+=item B<_utdate_to_object>
+
+Converts a UT date in YYYYMMDD format to a date object at midnight.
+
+  $obj = $trans->_utdate_to_object( $YYYYMMDD );
+
+=cut
+
+sub _utdate_to_object {
+  my $self = shift;
+  my $utdate = shift;
+  my $year = substr($utdate, 0, 4);
+  my $month= substr($utdate, 4, 2);
+  my $day  = substr($utdate, 6, 2);
+  my $basedate = $self->_parse_iso_date( $year."-".$month ."-".$day.
+                                         "T00:00:00");
+  return $basedate;
+}
+
+=item B<cosdeg>
+
+Return the cosine of the angle. The angle must be in degrees.
+
+=cut
+
+sub cosdeg {
+  my $self = shift;
+  my $deg = shift;
+  cos( deg2rad($deg) );
+}
+
+=item B<sindeg>
+
+Return the sine of the angle. The angle must be in degrees.
+
+=cut
+
+sub sindeg {
+  my $self = shift;
+  my $deg = shift;
+  sin( deg2rad($deg) );
+}
+
+=item B<via_subheader>
+
+For the supplied FITS header item, first check the primary header
+for existence, then check SUBHEADERS, then check "In" named subheaders.
+
+In scalar context returns the first value that matches.
+
+  $value = $trans->via_subheader( $FITS_headers, $keyword );
+
+In list context returns all the available values in order.
+
+  @values = $trans->via_subheader( $FITS_headers, $keyword );
+
+=cut
+
+sub via_subheader {
+  my $self = shift;
+  my $FITS_headers = shift;
+  my $keyword = shift;
+
+  my @values;
+  if (exists $FITS_headers->{$keyword}
+      && defined $FITS_headers->{$keyword}) {
+
+    if ( ref( $FITS_headers->{$keyword} ) eq 'ARRAY' ) {
+      @values = @{$FITS_headers->{$keyword}};
+    } else {
+      push (@values,$FITS_headers->{$keyword});
+    }
+  } elsif ( $FITS_headers->{SUBHEADERS}
+            && exists $FITS_headers->{SUBHEADERS}->[0]->{$keyword}) {
+    my @subs = @{$FITS_headers->{SUBHEADERS}};
+    for my $s (@subs) {
+      if (exists $s->{$keyword} && defined $s->{$keyword}) {
+        push(@values, $s->{$keyword});
+      }
+    }
+  } elsif (exists $FITS_headers->{I1}
+           && exists $FITS_headers->{I1}->{$keyword}) {
+    # need to find out how many In we have
+    my $i = 1;
+    while (exists $FITS_headers->{"I$i"}) {
+      push(@values, $FITS_headers->{"I$i"}->{$keyword});
+      $i++;
+    }
+  }
+
+  return (wantarray ? @values : $values[0] );
+}
+
+=item B<via_subheader_undef_check>
+
+Version of via_subheader that removes undefined values from the list before
+returning the answer. Useful for SCUBA-2 where the first dark may not include
+the TCS information.
+
+Same interface as via_subheader.
+
+=cut
+
+sub via_subheader_undef_check {
+  my $self = shift;
+  my @values = $self->via_subheader( @_ );
+
+  # completely filter out undefs
+  @values = grep { defined $_ } @values;
+  return (wantarray ? @values : $values[0] );
 }
 
 =back
@@ -301,12 +570,12 @@ sub _generate_lookup_methods {
 =head1 PROTECTED IMPORTS
 
 Not all translation methods warrant a full blown inheritance.  For
-cases where 1 or 2 translation routines should be imported
+cases where one or two translation routines should be imported
 (e.g. reading DATE-OBS FITS standard headers without importing the
-additoinal FITS methods) a special import routine can be used when
+additional FITS methods) a special import routine can be used when
 using the class.
 
-  use Astro::FITS::Header::FITS qw/ ROTATION /;
+  use Astro::FITS::HdrTrans::FITS qw/ ROTATION /;
 
 This will load the from_ROTATION and to_ROTATION methods into
 the namespace.
@@ -325,7 +594,7 @@ sub import {
     # In that case we do not want to loop over from_ and to_
     my @directions = qw/ from_ to_ /;
     if ($key =~ /^from_/ || $key =~ /^to_/) {
-      @directions = ( '' ); # empty prefix
+      @directions = ( '' );     # empty prefix
     }
 
     for my $dir (@directions) {
@@ -334,7 +603,7 @@ sub import {
       no strict 'refs';
 
       if (!defined *{"$class\::$method"}) {
-	croak "Method $method is not available for export from class $class";
+        croak "Method $method is not available for export from class $class";
       }
 
       # assign it
@@ -432,7 +701,7 @@ UTSTART and UTEND return (currently) Time::Piece objects.
 
 =head1 REVISION
 
- $Id: Base.pm,v 1.6 2006/02/07 02:32:40 timj Exp $
+ $Id$
 
 =head1 SEE ALSO
 

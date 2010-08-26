@@ -1,5 +1,3 @@
-# -*-perl-*-
-
 package Astro::FITS::HdrTrans::SCUBA;
 
 =head1 NAME
@@ -20,24 +18,24 @@ use strict;
 use Carp;
 
 # Inherit from Base
-use base qw/ Astro::FITS::HdrTrans::Base /;
+use base qw/ Astro::FITS::HdrTrans::JAC /;
 
 use vars qw/ $VERSION /;
 
-$VERSION = sprintf("%d.%03d", q$Revision: 1.25 $ =~ /(\d+)\.(\d+)/);
+$VERSION = "1.02";
 
 # for a constant mapping, there is no FITS header, just a generic
 # header that is constant
 my %CONST_MAP = (
-		 COORDINATE_UNITS  => 'sexagesimal',
-		 INSTRUMENT        => "SCUBA",
-		 INST_DHS          => 'SCUBA_SCUBA',
-		 NUMBER_OF_OFFSETS => 1,
-		 ROTATION          => 0,
-		 SLIT_ANGLE        => 0,
-		 SPEED_GAIN        => 'normal',
-		 TELESCOPE         => 'JCMT',
-		);
+                 COORDINATE_UNITS  => 'sexagesimal',
+                 INSTRUMENT        => "SCUBA",
+                 INST_DHS          => 'SCUBA_SCUBA',
+                 NUMBER_OF_OFFSETS => 1,
+                 ROTATION          => 0,
+                 SLIT_ANGLE        => 0,
+                 SPEED_GAIN        => 'normal',
+                 TELESCOPE         => 'JCMT',
+                );
 
 # NULL mappings used to override base class implementations
 my @NULL_MAP = qw/ DETECTOR_INDEX WAVEPLATE_ANGLE /;
@@ -46,34 +44,33 @@ my @NULL_MAP = qw/ DETECTOR_INDEX WAVEPLATE_ANGLE /;
 # to the output with only a keyword name change
 
 my %UNIT_MAP = (
-		AIRMASS_START        => "AMSTART",
-		AIRMASS_END          => "AMEND",
-		BOLOMETERS           => "BOLOMS",
-		CHOP_ANGLE           => "CHOP_PA",
-		CHOP_THROW           => "CHOP_THR",
-		DEC_BASE             => "LAT",
-		DEC_TELESCOPE_OFFSET => "MAP_Y",
-		DETECTOR_READ_TYPE   => "MODE",
-		DR_RECIPE            => "DRRECIPE",
-		FILENAME             => "SDFFILE",
-		FILTER               => "FILTER",
-		GAIN                 => "GAIN",
-		MSBID                => "MSBID",
-		NUMBER_OF_EXPOSURES  => "EXP_NO",
-		OBJECT               => "OBJECT",
-		OBSERVATION_NUMBER   => "RUN",
-		POLARIMETER          => "POL_CONN",
-		PROJECT              => "PROJ_ID",
-		RA_TELESCOPE_OFFSET  => "MAP_X",
-		SCAN_INCREMENT       => "SAM_DX",
-		SEEING               => "SEEING",
-		STANDARD             => "STANDARD",
-		TAU                  => "TAU_225",
-		X_BASE               => "LONG",
-		Y_BASE               => "LAT",
-		X_OFFSET             => "MAP_X",
-		Y_OFFSET             => "MAP_Y"
-	       );
+                AIRMASS_START        => "AMSTART",
+                AIRMASS_END          => "AMEND",
+                BOLOMETERS           => "BOLOMS",
+                CHOP_ANGLE           => "CHOP_PA",
+                CHOP_THROW           => "CHOP_THR",
+                DEC_BASE             => "LAT",
+                DEC_TELESCOPE_OFFSET => "MAP_Y",
+                DETECTOR_READ_TYPE   => "MODE",
+                DR_RECIPE            => "DRRECIPE",
+                FILENAME             => "SDFFILE",
+                FILTER               => "FILTER",
+                GAIN                 => "GAIN",
+                NUMBER_OF_EXPOSURES  => "EXP_NO",
+                OBJECT               => "OBJECT",
+                OBSERVATION_NUMBER   => "RUN",
+                POLARIMETER          => "POL_CONN",
+                PROJECT              => "PROJ_ID",
+                RA_TELESCOPE_OFFSET  => "MAP_X",
+                SCAN_INCREMENT       => "SAM_DX",
+                SEEING               => "SEEING",
+                STANDARD             => "STANDARD",
+                TAU                  => "TAU_225",
+                X_BASE               => "LONG",
+                Y_BASE               => "LAT",
+                X_OFFSET             => "MAP_X",
+                Y_OFFSET             => "MAP_Y"
+               );
 
 
 # Create the translation methods
@@ -98,6 +95,30 @@ Returns "SCUBA".
 
 sub this_instrument {
   return "SCUBA";
+}
+
+=item B<can_translate>
+
+The database tables do not include an instrument field so we need to determine
+suitability by looking at other fields instead of using the base implementation.
+
+  $cando = $class->can_translate( \%hdrs );
+
+For SCUBA we first check for BOLOMS and SCU# headers and then use the base
+implementation that will look at the INSTRUME field.
+
+=cut
+
+sub can_translate {
+  my $self = shift;
+  my $headers = shift;
+
+  if (exists $headers->{BOLOMS} && defined $headers->{BOLOMS} &&
+      exists $headers->{"SCU#"} && defined $headers->{"SCU#"}) {
+    return 1;
+  } else {
+    return $self->SUPER::can_translate( $headers );
+  }
 }
 
 =back
@@ -130,13 +151,13 @@ sub to_CHOP_COORDINATE_SYSTEM {
   my $FITS_headers = shift;
   my $return;
 
-  if(exists($FITS_headers->{'CHOP_CRD'})) {
+  if (exists($FITS_headers->{'CHOP_CRD'})) {
     my $fits_eq = $FITS_headers->{'CHOP_CRD'};
-    if( $fits_eq =~ /LO/i ) {
+    if ( $fits_eq =~ /LO/i ) {
       $return = "Tracking";
-    } elsif( $fits_eq =~ /AZ/i ) {
+    } elsif ( $fits_eq =~ /AZ/i ) {
       $return = "Alt/Az";
-    } elsif( $fits_eq =~ /NA/i ) {
+    } elsif ( $fits_eq =~ /NA/i ) {
       $return = "Focal Plane";
     }
   }
@@ -155,15 +176,15 @@ sub to_COORDINATE_TYPE {
   my $self = shift;
   my $FITS_headers = shift;
   my $return;
-  if(exists($FITS_headers->{'CENT_CRD'})) {
+  if (exists($FITS_headers->{'CENT_CRD'})) {
     my $fits_eq = $FITS_headers->{'CENT_CRD'};
-    if( $fits_eq =~ /RB/i ) {
+    if ( $fits_eq =~ /RB/i ) {
       $return = "B1950";
-    } elsif( $fits_eq =~ /RJ/i ) {
+    } elsif ( $fits_eq =~ /RJ/i ) {
       $return = "J2000";
-    } elsif( $fits_eq =~ /AZ/i ) {
+    } elsif ( $fits_eq =~ /AZ/i ) {
       $return = "galactic";
-    } elsif( $fits_eq =~ /planet/i ) {
+    } elsif ( $fits_eq =~ /planet/i ) {
       $return = "planet";
     }
   }
@@ -193,17 +214,17 @@ sub to_EQUINOX {
   my $self = shift;
   my $FITS_headers = shift;
   my $return;
-  if(exists($FITS_headers->{'CENT_CRD'})) {
+  if (exists($FITS_headers->{'CENT_CRD'})) {
     my $fits_eq = $FITS_headers->{'CENT_CRD'};
-    if( $fits_eq =~ /RB/i ) {
+    if ( $fits_eq =~ /RB/i ) {
       $return = "1950";
-    } elsif( $fits_eq =~ /RJ/i ) {
+    } elsif ( $fits_eq =~ /RJ/i ) {
       $return = "2000";
-    } elsif( $fits_eq =~ /RD/i ) {
+    } elsif ( $fits_eq =~ /RD/i ) {
       $return = "current";
-    } elsif( $fits_eq =~ /PLANET/i ) {
+    } elsif ( $fits_eq =~ /PLANET/i ) {
       $return = "planet";
-    } elsif( $fits_eq =~ /AZ/i ) {
+    } elsif ( $fits_eq =~ /AZ/i ) {
       $return = "AZ/EL";
     }
   }
@@ -222,18 +243,18 @@ sub from_EQUINOX {
   my $generic_headers = shift;
   my %return_hash;
   my $return;
-  if(exists($generic_headers->{EQUINOX}) && 
-     defined $generic_headers->{EQUINOX}) {
+  if (exists($generic_headers->{EQUINOX}) &&
+      defined $generic_headers->{EQUINOX}) {
     my $equinox = $generic_headers->{EQUINOX};
-    if( $equinox =~ /1950/ ) {
+    if ( $equinox =~ /1950/ ) {
       $return = 'RB';
-    } elsif( $equinox =~ /2000/ ) {
+    } elsif ( $equinox =~ /2000/ ) {
       $return = 'RJ';
-    } elsif( $equinox =~ /current/ ) {
+    } elsif ( $equinox =~ /current/ ) {
       $return = 'RD';
-    } elsif( $equinox =~ /planet/ ) {
+    } elsif ( $equinox =~ /planet/ ) {
       $return = 'PLANET';
-    } elsif( $equinox =~ /AZ\/EL/ ) {
+    } elsif ( $equinox =~ /AZ\/EL/ ) {
       $return = 'AZ';
     } else {
       $return = $equinox;
@@ -254,8 +275,8 @@ sub to_OBSERVATION_MODE {
   my $self = shift;
   my $FITS_headers = shift;
   my $return;
-  if( defined( $FITS_headers->{'MODE'} ) &&
-      $FITS_headers->{'MODE'} =~ /PHOTOM/i ) {
+  if ( defined( $FITS_headers->{'MODE'} ) &&
+       $FITS_headers->{'MODE'} =~ /PHOTOM/i ) {
     $return = "photometry";
   } else {
     $return = "imaging";
@@ -277,7 +298,7 @@ sub to_OBSERVATION_TYPE {
   my $FITS_headers = shift;
   my $return;
   my $mode = $FITS_headers->{'MODE'};
-  if( defined( $mode ) && $mode =~ /PHOTOM|MAP|POLPHOT|POLMAP/i) {
+  if ( defined( $mode ) && $mode =~ /PHOTOM|MAP|POLPHOT|POLMAP/i) {
     $return = "OBJECT";
   } else {
     $return = $mode;
@@ -298,7 +319,7 @@ sub to_POLARIMETRY {
   my $FITS_headers = shift;
   my $return;
   my $mode = $FITS_headers->{'MODE'};
-  if(defined( $mode ) && $mode =~ /POLMAP|POLPHOT/i) {
+  if (defined( $mode ) && $mode =~ /POLMAP|POLPHOT/i) {
     $return = 1;
   } else {
     $return = 0;
@@ -316,14 +337,22 @@ sub to_UTDATE {
   my $self = shift;
   my $FITS_headers = shift;
   my $return;
-  if( exists( $FITS_headers->{'UTDATE'} ) &&
-      defined( $FITS_headers->{'UTDATE'} ) ) {
+  if ( exists( $FITS_headers->{'UTDATE'} ) &&
+       defined( $FITS_headers->{'UTDATE'} ) ) {
     my $utdate = $FITS_headers->{'UTDATE'};
-    $return = Time::Piece->strptime( $utdate, "%Y:%m:%d" );
-  } elsif( exists( $FITS_headers->{'DATE'} ) &&
-           defined( $FITS_headers->{'DATE'} ) ) {
+    $return = $self->_parse_yyyymmdd_date( $utdate, ":" );
+  } elsif ( exists( $FITS_headers->{'DATE'} ) &&
+            defined( $FITS_headers->{'DATE'} ) ) {
     my $utdate = $FITS_headers->{'DATE'};
-    $return = Time::Piece->strptime( $utdate, "%Y-%m-%dT%T" );
+    $return = $self->_parse_iso_date( $utdate );
+  } elsif ( exists( $FITS_headers->{'DATE-OBS'} ) &&
+            defined( $FITS_headers->{'DATE-OBS'} ) ) {
+    my $utdate = $FITS_headers->{'DATE-OBS'};
+    $return = $self->_parse_iso_date( $utdate );
+  }
+  if (defined $return) {
+    $return = sprintf('%04d%02d%02d',$return->year,
+                      $return->mon, $return->mday);
   }
   return $return;
 }
@@ -339,10 +368,12 @@ sub from_UTDATE {
   my $self = shift;
   my $generic_headers = shift;
   my %return_hash;
-  if(exists($generic_headers->{UTDATE}) &&
-     UNIVERSAL::isa( $generic_headers->{UTDATE}, "Time::Piece" ) ) {
+  if (exists($generic_headers->{UTDATE}) ) {
     my $date = $generic_headers->{UTDATE};
-    $return_hash{'UTDATE'} = join ':', $date->year, $date->mon, $date->mday;
+    $return_hash{UTDATE} = join(':',
+                                substr($date,0,4),
+                                substr($date,4,2),
+                                substr($date,6,2));
   }
   return %return_hash;
 }
@@ -358,21 +389,27 @@ sub to_UTSTART {
   my $self = shift;
   my $FITS_headers = shift;
   my $return;
-  if( exists( $FITS_headers->{'UTDATE'} ) &&
-      defined( $FITS_headers->{'UTDATE'} ) ) {
+  if ( exists( $FITS_headers->{'UTDATE'} ) &&
+       defined( $FITS_headers->{'UTDATE'} ) &&
+       exists $FITS_headers->{UTSTART} &&
+       defined $FITS_headers->{UTSTART} ) {
 
-    my $ut = $FITS_headers->{'UTDATE'} . ":" . $FITS_headers->{'UTSTART'};
+    # To convert to ISO replace colons with dashes
+    my $utdate = $FITS_headers->{UTDATE};
+    $utdate =~ s/:/\-/g;
 
-    # Strip off fractional seconds.
-    $ut =~ s/\.\d+$//;
+    my $ut = $utdate . "T" . $FITS_headers->{'UTSTART'};
+    $return = $self->_parse_iso_date( $ut );
 
-    $return = Time::Piece->strptime( $ut, "%Y:%m:%d:%T" );
+  } elsif (exists $FITS_headers->{"DATE-OBS"}) { 
+    # reduced data
+    $return = $self->_parse_iso_date( $FITS_headers->{"DATE-OBS"} );
 
-  } elsif( exists( $FITS_headers->{'DATE'} ) &&
-           defined( $FITS_headers->{'DATE'} ) &&
-           $FITS_headers->{'DATE'} =~ /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d$/ ) {
+  } elsif ( exists( $FITS_headers->{'DATE'} ) &&
+            defined( $FITS_headers->{'DATE'} ) &&
+            $FITS_headers->{'DATE'} =~ /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d/ ) {
 
-    $return = Time::Piece->strptime( $FITS_headers->{'DATE'}, "%Y-%m-%dT%T" );
+    $return = $self->_parse_iso_date( $FITS_headers->{"DATE"} );
 
   }
 
@@ -390,8 +427,8 @@ sub from_UTSTART {
   my $self = shift;
   my $generic_headers = shift;
   my %return_hash;
-  if(exists($generic_headers->{UTSTART}) &&
-     UNIVERSAL::isa( $generic_headers->{UTSTART}, "Time::Piece" ) ) {
+  if (exists($generic_headers->{UTSTART}) &&
+      UNIVERSAL::isa( $generic_headers->{UTSTART}, "Time::Piece" ) ) {
     my $ut = $generic_headers->{UTSTART};
     $return_hash{'UTDATE'} = join ':', $ut->year, $ut->mon, $ut->mday;
     $return_hash{'UTSTART'} = join ':', $ut->hour, $ut->minute, $ut->second;
@@ -412,16 +449,22 @@ sub to_UTEND {
   my $FITS_headers = shift;
   my $return;
 
-  if( exists( $FITS_headers->{'UTDATE'} ) &&
-      defined( $FITS_headers->{'UTDATE'} ) ) {
+  if ( exists( $FITS_headers->{'UTDATE'} ) &&
+       defined( $FITS_headers->{'UTDATE'} ) &&
+       exists $FITS_headers->{UTEND} &&
+       defined $FITS_headers->{UTEND} ) {
 
-    my $ut = $FITS_headers->{'UTDATE'} . ":" . $FITS_headers->{'UTEND'};
+    # need to replace colons with -
+    my $utdate = $FITS_headers->{"UTDATE"};
+    $utdate =~ s/:/\-/g;
 
-    # Strip off fractional seconds.
-    $ut =~ s/\.\d+$//;
+    my $ut = $utdate . "T" . $FITS_headers->{'UTEND'};
 
-    $return = Time::Piece->strptime( $ut, "%Y:%m:%d:%T" );
+    $return = $self->_parse_iso_date( $ut );
 
+  } elsif (exists $FITS_headers->{"DATE-END"}) {
+    # reduced data
+    $return = $self->_parse_iso_date( $FITS_headers->{"DATE-END"} );
   }
   return $return;
 }
@@ -437,8 +480,8 @@ sub from_UTEND {
   my $self = shift;
   my $generic_headers = shift;
   my %return_hash;
-  if(exists($generic_headers->{UTEND}) &&
-     UNIVERSAL::isa( $generic_headers->{UTEND}, "Time::Piece" ) ) {
+  if (exists($generic_headers->{UTEND}) &&
+      UNIVERSAL::isa( $generic_headers->{UTEND}, "Time::Piece" ) ) {
     my $ut = $generic_headers->{UTEND};
     $generic_headers->{UTEND} =~ /(\d{4})-(\d\d)-(\d\d)T(\d\d):(\d\d):(\d\d)/;
     $return_hash{'UTDATE'} = join ':', $ut->year, $ut->mon, $ut->mday;
@@ -447,11 +490,29 @@ sub from_UTEND {
   return %return_hash;
 }
 
+=item B<to_MSBID>
+
+Converts the MSBID field to an MSBID. Complication is that the SCUBA
+header and database store a blank MSBID as a single space rather than
+an empty string and this causes difficulty in some subsystems.
+
+This routine replaces a single space with a null string.
+
+=cut
+
+sub to_MSBID {
+  my $self = shift;
+  my $FITS_headers = shift;
+  my $msbid = $FITS_headers->{MSBID};
+  $msbid =~ s/\s+$// if defined $msbid;
+  return $msbid;
+}
+
 =back
 
 =head1 REVISION
 
- $Id: SCUBA.pm,v 1.25 2005/04/06 21:52:48 timj Exp $
+ $Id$
 
 =head1 SEE ALSO
 
@@ -464,6 +525,7 @@ Tim Jenness E<lt>t.jenness@jach.hawaii.eduE<gt>
 
 =head1 COPYRIGHT
 
+Copyright (C) 2007 Science and Technology Facilities Council.
 Copyright (C) 2003-2005 Particle Physics and Astronomy Research Council.
 All Rights Reserved.
 

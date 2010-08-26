@@ -1,14 +1,32 @@
-# http://module-build.sourceforge.net/META-spec.html
-#XXXXXXX This is a prototype!!!  It will change in the future!!! XXXXX#
-name:         Astro-FITS-HdrTrans
-version:      0.05
-version_from: lib/Astro/FITS/HdrTrans.pm
-installdirs:  site
+--- #YAML:1.0
+name:               Astro-FITS-HdrTrans
+version:            1.06
+abstract:           Translate FITS headers to standardised form
+author:
+    - Brad Cavanagh E<lt>b.cavanagh@jach.hawaii.eduE<gt>
+license:            unknown
+distribution_type:  module
+configure_requires:
+    ExtUtils::MakeMaker:  0
+build_requires:
+    ExtUtils::MakeMaker:  0
 requires:
-    Math::Trig:                    0
-    Switch:                        0
-    Test::More:                    0
-    Time::Piece:                   0
-
-distribution_type: module
-generated_by: ExtUtils::MakeMaker version 6.17
+    Astro::Coords:        0
+    Astro::FITS::Header:  0
+    Astro::SLA:           0
+    Astro::Telescope:     0
+    DateTime:             0
+    DateTime::TimeZone:   0
+    Math::Trig:           0
+    Scalar::Util:         0
+    Switch:               0
+    Test::More:           0
+    Time::Piece:          0
+no_index:
+    directory:
+        - t
+        - inc
+generated_by:       ExtUtils::MakeMaker version 6.55_02
+meta-spec:
+    url:      http://module-build.sourceforge.net/META-spec-v1.4.html
+    version:  1.4
