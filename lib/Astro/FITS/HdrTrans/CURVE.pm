@@ -1,19 +1,19 @@
-package Astro::FITS::HdrTrans::GMOS;
+package Astro::FITS::HdrTrans::CURVE;
 
 =head1 NAME
 
-Astro::FITS::HdrTrans::GMOS - Gemini GMOS translations
+Astro::FITS::HdrTrans::CURVE - UKIRT CURVE translations
 
 =head1 SYNOPSIS
 
-  use Astro::FITS::HdrTrans::GMOS;
+  use Astro::FITS::HdrTrans::CURVE;
 
-  %gen = Astro::FITS::HdrTrans::GMOS->translate_from_FITS( %hdr );
+  %gen = Astro::FITS::HdrTrans::CURVE->translate_from_FITS( %hdr );
 
 =head1 DESCRIPTION
 
 This class provides a generic set of translations that are specific to
-GMOS on the Gemini Observatory.
+the CURVE camera of the United Kingdom Infrared Telescope.
 
 =cut
 
@@ -22,8 +22,8 @@ use warnings;
 use strict;
 use Carp;
 
-# Inherit from GEMINI
-use base qw/ Astro::FITS::HdrTrans::GEMINI /;
+# Inherit from UFTI.
+use base qw/ Astro::FITS::HdrTrans::UFTI /;
 
 use vars qw/ $VERSION /;
 
@@ -32,7 +32,7 @@ $VERSION = "1.50";
 # for a constant mapping, there is no FITS header, just a generic
 # header that is constant
 my %CONST_MAP = (
-                 OBSERVATION_MODE => 'imaging',
+                 FILE_FORMAT => "FITS",
                 );
 
 # NULL mappings used to override base class implementations
@@ -42,6 +42,7 @@ my @NULL_MAP = qw/ /;
 # to the output with only a keyword name change
 
 my %UNIT_MAP = (
+
                );
 
 
@@ -61,19 +62,19 @@ C<can_translate> method.
 
   $inst = $class->this_instrument();
 
-Returns "GMOS".
+Returns "CURVE".
 
 =cut
 
 sub this_instrument {
-  return qr/^GMOS/;
+  return "CURVE";
 }
 
 =back
 
 =head1 REVISION
 
- $Id: SOFI.pm 14879 2008-02-13 21:51:31Z timj $
+ $Id: UFTI.pm 15284 2008-04-22 16:46:05Z mjc $
 
 =head1 SEE ALSO
 
@@ -81,12 +82,14 @@ C<Astro::FITS::HdrTrans>, C<Astro::FITS::HdrTrans::UKIRT>.
 
 =head1 AUTHOR
 
+Malcolm J. Currie E<lt>mjc@star.rl.ac.ukE<gt>
 Brad Cavanagh E<lt>b.cavanagh@jach.hawaii.eduE<gt>,
 Tim Jenness E<lt>t.jenness@jach.hawaii.eduE<gt>.
 
 =head1 COPYRIGHT
 
-Copyright (C) 2003-2005 Particle Physics and Astronomy Research Council.
+Copyright (C) 2008 Science and Technology Facilities Council.
+Copyright (C) 2003-2007 Particle Physics and Astronomy Research Council.
 All Rights Reserved.
 
 This program is free software; you can redistribute it and/or modify it under

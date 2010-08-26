@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               Astro-FITS-HdrTrans
-version:            1.06
+version:            1.50
 abstract:           Translate FITS headers to standardised form
 author:
     - Brad Cavanagh E<lt>b.cavanagh@jach.hawaii.eduE<gt>
