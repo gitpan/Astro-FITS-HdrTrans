@@ -1,6 +1,6 @@
 MANIFEST
 README
-Makefile.PL
+Build.PL
 ChangeLog
 lib/Astro/FITS/HdrTrans.pm
 lib/Astro/FITS/HdrTrans/ACSIS.pm
@@ -45,6 +45,8 @@ t/scuba.t
 t/scuba2.t
 t/translate.t
 t/bidi.t
+t/ircam.t
+t/ukirtdb.t
 t/data/README
 t/data/acsis.hdr
 t/data/cgs4.hdr
@@ -59,5 +61,4 @@ t/data/uist_sp.hdr
 t/data/wfcam.hdr
 t/data/a20070425_00012_02_bl.sdf
 translatehdr
-
-META.yml                                 Module meta-data (added by MakeMaker)
+META.yml
