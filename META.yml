@@ -129,7 +129,7 @@ provides:
     version: 1.50
 recommends:
   Astro::SLA: 0
-  Starlink::AST: 0
+  Starlink::AST: 1.02
 requires:
   Astro::Coords: 0
   Astro::FITS::Header: 0
@@ -142,4 +142,4 @@ requires:
 resources:
   license: http://opensource.org/licenses/gpl-license.php
   repository: git://github.com/bradcavanagh/perl-Astro-FITS-HdrTrans.git
-version: 1.52
+version: 1.53
