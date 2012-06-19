@@ -50,7 +50,6 @@ our $UTC = DateTime::TimeZone->new( name => 'UTC' );
 # header that is constant
 my %CONST_MAP = (
                  INST_DHS          => 'ACSIS',
-                 SUBSYSTEM_IDKEY   => 'SUBSYSNR',
                 );
 
 # unit mapping implies that the value propogates directly
@@ -90,6 +89,8 @@ Returns true if the supplied headers can be handled by this class.
 For this class, the method will return true if the B<BACKEND> header exists
 and matches 'ACSIS'.
 
+Can also match translated GSD files.
+
 =cut
 
 sub can_translate {
@@ -100,6 +101,21 @@ sub can_translate {
        defined $headers->{BACKEND} &&
        $headers->{BACKEND} =~ /^ACSIS/i
      ) {
+    return 1;
+  } elsif ( exists $headers->{BACKEND} &&
+            defined $headers->{BACKEND} &&
+            $headers->{BACKEND} =~ /^DAS/i &&
+            exists $headers->{OBSID} &&
+            defined $headers->{OBSID} &&
+            $headers->{OBSID} =~ /^DAS/) {
+    # Do not want to confuse with reverse conversion
+    # of JCMT_GSD data headers which will have a defined
+    # BACKEND header of DAS.
+    return 1;
+  } elsif ( exists $headers->{INST_DHS} &&
+            defined $headers->{INST_DHS} &&
+            $headers->{INST_DHS} eq 'ACSIS') {
+    # This is for the reverse conversion of DAS data
     return 1;
   } else {
     return 0;
@@ -141,6 +157,7 @@ sub to_DR_RECIPE {
   my $pol = $class->to_POLARIMETER( $FITS_headers );
   my $standard = $class->to_STANDARD( $FITS_headers );
   my $utdate = $class->to_UTDATE( $FITS_headers );
+  my $freq_sw = $class->_is_FSW( $FITS_headers );
 
   if ($utdate < 20080701) {
     if ($obstype eq 'skydip' && $dr eq 'REDUCE_SCIENCE') {
@@ -158,9 +175,9 @@ sub to_DR_RECIPE {
   if ( $utdate > 20081115 && $pol && $is_sci ) {
     $dr .= "_POL" unless $dr =~ /_POL$/;
   }
-
-  if( uc( $dr ) eq 'REDUCE_SCIENCE' ) {
-    $dr = 'REDUCE_SCIENCE_GRADIENT';
+  $dr = uc($dr);
+  if( $dr eq 'REDUCE_SCIENCE' ) {
+    $dr .= '_' . ($freq_sw ? 'FSW' : 'GRADIENT');
   }
 
   return $dr;
@@ -608,6 +625,39 @@ sub to_VELOCITY {
   }
 
   return $velocity;
+}
+
+=item B<to_SUBSYSTEM_IDKEY>
+
+=cut
+
+sub to_SUBSYSTEM_IDKEY {
+  my $self = shift;
+  my $FITS_headers = shift;
+
+  # Try the general headers first
+  my $general = $self->SUPER::to_SUBSYSTEM_IDKEY( $FITS_headers );
+  return ( defined $general ? $general : "SUBSYSNR" );
+}
+
+
+=item B<_is_FSW>
+
+Helper function to determine if we are doing frequency switch.
+
+=cut
+
+sub _is_FSW {
+  my $class = shift;
+  my $FITS_headers = shift;
+
+  my $fsw = $FITS_headers->{SW_MODE};
+
+  if ( defined( $fsw ) &&
+       $fsw =~ /freqsw/i ) {
+    return 1;
+  }
+  return 0;
 }
 
 =back

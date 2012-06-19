@@ -7,9 +7,10 @@ build_requires:
   Test::More: 0
   Time::Piece: 0
 configure_requires:
-  Module::Build: 0.36
-generated_by: 'Module::Build version 0.3607'
-license: gpl
+  Module::Build: 0.3
+dynamic_config: 1
+generated_by: 'Module::Build version 0.3901, CPAN::Meta::Converter version 2.120630'
+license: open_source
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
   version: 1.4
@@ -17,7 +18,7 @@ name: Astro-FITS-HdrTrans
 provides:
   Astro::FITS::HdrTrans:
     file: lib/Astro/FITS/HdrTrans.pm
-    version: 1.50
+    version: 1.51
   Astro::FITS::HdrTrans::ACSIS:
     file: lib/Astro/FITS/HdrTrans/ACSIS.pm
     version: 1.50
@@ -65,12 +66,25 @@ provides:
     version: 1.50
   Astro::FITS::HdrTrans::JCMT:
     file: lib/Astro/FITS/HdrTrans/JCMT.pm
+    version: 0
   Astro::FITS::HdrTrans::JCMT_GSD:
     file: lib/Astro/FITS/HdrTrans/JCMT_GSD.pm
     version: 1.50
   Astro::FITS::HdrTrans::JCMT_GSD_DB:
     file: lib/Astro/FITS/HdrTrans/JCMT_GSD_DB.pm
     version: 1.50
+  Astro::FITS::HdrTrans::LCO:
+    file: lib/Astro/FITS/HdrTrans/LCO.pm
+    version: 5661
+  Astro::FITS::HdrTrans::LCOSBIG_0m4:
+    file: lib/Astro/FITS/HdrTrans/LCOSBIG_0m4.pm
+    version: 5661
+  Astro::FITS::HdrTrans::LCOSBIG_1m0:
+    file: lib/Astro/FITS/HdrTrans/LCOSBIG_1m0.pm
+    version: 5661
+  Astro::FITS::HdrTrans::LCOSBIG_CC:
+    file: lib/Astro/FITS/HdrTrans/LCOSBIG_CC.pm
+    version: 5661
   Astro::FITS::HdrTrans::MICHELLE:
     file: lib/Astro/FITS/HdrTrans/MICHELLE.pm
     version: 1.50
@@ -114,11 +128,11 @@ provides:
     file: lib/Astro/FITS/HdrTrans/WFCAM.pm
     version: 1.50
 recommends:
+  Astro::SLA: 0
   Starlink::AST: 0
 requires:
   Astro::Coords: 0
   Astro::FITS::Header: 0
-  Astro::SLA: 0
   Astro::Telescope: 0
   DateTime: 0
   DateTime::TimeZone: 0
@@ -128,4 +142,4 @@ requires:
 resources:
   license: http://opensource.org/licenses/gpl-license.php
   repository: git://github.com/bradcavanagh/perl-Astro-FITS-HdrTrans.git
-version: 1.51
+version: 1.52

@@ -32,7 +32,7 @@ my $build = Module::Build->new
                    'Tim Jenness <t.jenness@jach.hawaii.edu>',
                    'Brad Cavanagh <b.cavanagh@jach.hawaii.edu>',
                   ],
-   dist_version => '1.51',
+   dist_version => '1.52',
    script_files => [ qw/
                          translatehdr
                        / ],
@@ -43,11 +43,11 @@ my $build = Module::Build->new
                 },
    recommends => {
                   'Starlink::AST' => 0,
+                  'Astro::SLA' => 0,
                  },
    requires => {
                 'Astro::Coords' => 0,
                 'Astro::FITS::Header' => 0,
-                'Astro::SLA' => 0,
                 'Astro::Telescope' => 0,
                 'DateTime' => 0,
                 'DateTime::TimeZone' => 0,
@@ -59,6 +59,9 @@ my $build = Module::Build->new
                       'Test::More' => 0,
                       'Time::Piece' => 0,
                      },
+   configure_requires => {
+                          "Module::Build" => 0.30,
+                         },
   );
 
 $build->create_build_script;

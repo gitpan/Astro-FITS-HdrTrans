@@ -18,6 +18,7 @@ my %UNIT_MAP =
     AZIMUTH_START        => 'AZSTART',
     ELEVATION_START      => 'ELSTART',
     FILENAME             => 'FILE_ID',
+    DR_RECIPE            => "RECIPE",
     HUMIDITY             => 'HUMSTART',
     LATITUDE             => 'LAT-OBS',
     LONGITUDE            => 'LONG-OBS',
@@ -155,6 +156,50 @@ sub to_TAU {
   return $tau;
 }
 
+=item B<to_OBSERVATION_ID_SUBSYSTEM>
+
+Returns the subsystem observation IDs associated with the header.
+Returns a reference to an array. Will be empty if the OBSIDSS header
+is missing.
+
+=cut
+
+sub to_OBSERVATION_ID_SUBSYSTEM {
+  my $self = shift;
+  my $FITS_headers = shift;
+  # Try multiple headers since the database is different to the file
+  my @obsidss;
+  for my $h (qw/ OBSIDSS OBSID_SUBSYSNR /) {
+    my @found = $self->via_subheader( $FITS_headers, $h );
+    if (@found) {
+      @obsidss = @found;
+      last;
+    }
+  }
+  my @all;
+  if (@obsidss) {
+    # Remove duplicates
+    my %seen;
+    @all = grep { ! $seen{$_}++ } @obsidss;
+  }
+  return \@all;
+}
+
+=item B<to_SUBSYSTEM_IDKEY>
+
+=cut
+
+sub to_SUBSYSTEM_IDKEY {
+  my $self = shift;
+  my $FITS_headers = shift;
+
+  for my $try ( qw/ OBSIDSS OBSID_SUBSYSNR / ) {
+    my @results = $self->via_subheader( $FITS_headers, $try );
+    return $try if @results;
+  }
+  return;
+}
+
 
 =head1 PRIVATE METHODS
 
@@ -197,8 +242,13 @@ sub _calc_coords {
     my $az_start  = $FITS_headers->{'AZSTART'};
     my $el_start  = $FITS_headers->{'ELSTART'};
 
+    $dateobs  = _middle_value($dateobs)  if ref $dateobs;
+    $az_start = _middle_value($az_start) if ref $az_start;
+    $el_start = _middle_value($el_start) if ref $el_start;
+
     my $coords = new Astro::Coords( az => $az_start,
                                     el => $el_start,
+                                    units => 'degrees',
                                   );
     $coords->telescope( new Astro::Telescope( $telescope ) );
 
@@ -213,6 +263,17 @@ sub _calc_coords {
   }
 
   return undef;
+}
+
+=item B<_middle_value>
+
+Returns the value from the middle of an array reference.
+
+=cut
+
+sub _middle_value {
+  my $arr = shift;
+  return $arr->[int ((scalar @$arr) / 2)];
 }
 
 =back

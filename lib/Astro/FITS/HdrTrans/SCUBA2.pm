@@ -40,7 +40,6 @@ my %UNIT_MAP = (
                 FILTER               => "FILTER",
                 INSTRUMENT           => "INSTRUME",
                 DR_GROUP             => "DRGROUP",
-                DR_RECIPE            => "RECIPE",
                 OBSERVATION_TYPE     => "OBS_TYPE",
                 POLARIMETER          => 'POL_CONN',
                 UTDATE               => "UTDATE",
@@ -115,11 +114,53 @@ sub to_OBSERVATION_MODE {
 
     $return = $sam_mode;
     if ($obs_type !~ /science/i) {
-      $return .= "_$obs_type";
+      if ($obs_type =~ /(setup)/i) {
+        $return = lc($1);
+      } else {
+        $return .= "_$obs_type";
+      }
     }
   }
   return $return;
 }
+
+=item B<to_SUBSYSTEM_IDKEY>
+
+=cut
+
+sub to_SUBSYSTEM_IDKEY {
+  my $self = shift;
+  my $FITS_headers = shift;
+
+  # Try the general headers first
+  my $general = $self->SUPER::to_SUBSYSTEM_IDKEY( $FITS_headers );
+  return ( defined $general ? $general : "FILTER" );
+}
+
+=item B<to_DR_RECIPE>
+
+Fix up recipes that were incorrect in the early years of the
+observing tool.
+
+Converts SASSy survey data to use the SASSy recipe.
+
+=cut
+
+sub to_DR_RECIPE {
+  my $class = shift;
+  my $FITS_headers = shift;
+  my $dr = $FITS_headers->{RECIPE};
+  my $survey = $FITS_headers->{SURVEY};
+
+  if (defined $survey && $survey =~ /sassy/i) {
+    if ($dr !~ /sassy/i) {
+      $dr = "REDUCE_SASSY";
+    }
+  }
+  return $dr;
+}
+
+=cut
 
 =back
 
@@ -137,6 +178,7 @@ Tim Jenness E<lt>t.jenness@jach.hawaii.eduE<gt>
 
 =head1 COPYRIGHT
 
+Copyright (C) 2007-2009,2011 Science & Technology Facilities Council.
 Copyright (C) 2003-2005 Particle Physics and Astronomy Research Council.
 All Rights Reserved.
 
