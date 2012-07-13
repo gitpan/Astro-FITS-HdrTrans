@@ -66,7 +66,7 @@ provides:
     version: 1.50
   Astro::FITS::HdrTrans::JCMT:
     file: lib/Astro/FITS/HdrTrans/JCMT.pm
-    version: 0
+    version: 1.01
   Astro::FITS::HdrTrans::JCMT_GSD:
     file: lib/Astro/FITS/HdrTrans/JCMT_GSD.pm
     version: 1.50
@@ -142,4 +142,4 @@ requires:
 resources:
   license: http://opensource.org/licenses/gpl-license.php
   repository: git://github.com/bradcavanagh/perl-Astro-FITS-HdrTrans.git
-version: 1.53
+version: 1.54
