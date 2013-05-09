@@ -3,13 +3,14 @@ abstract: 'Translate FITS headers to standardised form'
 author:
   - 'Tim Jenness <t.jenness@jach.hawaii.edu>'
   - 'Brad Cavanagh <b.cavanagh@jach.hawaii.edu>'
+  - 'Malcolm J. Currie <mjc@star.rl.ac.uk>'
 build_requires:
   Test::More: 0
   Time::Piece: 0
 configure_requires:
   Module::Build: 0.3
 dynamic_config: 1
-generated_by: 'Module::Build version 0.3901, CPAN::Meta::Converter version 2.120630'
+generated_by: 'Module::Build version 0.4003, CPAN::Meta::Converter version 2.120921'
 license: open_source
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
@@ -18,10 +19,10 @@ name: Astro-FITS-HdrTrans
 provides:
   Astro::FITS::HdrTrans:
     file: lib/Astro/FITS/HdrTrans.pm
-    version: 1.51
+    version: 1.55
   Astro::FITS::HdrTrans::ACSIS:
     file: lib/Astro/FITS/HdrTrans/ACSIS.pm
-    version: 1.50
+    version: 1.55
   Astro::FITS::HdrTrans::Base:
     file: lib/Astro/FITS/HdrTrans/Base.pm
     version: 1.50
@@ -30,7 +31,7 @@ provides:
     version: 1.50
   Astro::FITS::HdrTrans::CGS4Old:
     file: lib/Astro/FITS/HdrTrans/CGS4Old.pm
-    version: 1.50
+    version: 1.55
   Astro::FITS::HdrTrans::CURVE:
     file: lib/Astro/FITS/HdrTrans/CURVE.pm
     version: 1.50
@@ -78,10 +79,10 @@ provides:
     version: 5661
   Astro::FITS::HdrTrans::LCOSBIG_0m4:
     file: lib/Astro/FITS/HdrTrans/LCOSBIG_0m4.pm
-    version: 5661
+    version: 5932
   Astro::FITS::HdrTrans::LCOSBIG_1m0:
     file: lib/Astro/FITS/HdrTrans/LCOSBIG_1m0.pm
-    version: 5661
+    version: 5932
   Astro::FITS::HdrTrans::LCOSBIG_CC:
     file: lib/Astro/FITS/HdrTrans/LCOSBIG_CC.pm
     version: 5661
@@ -99,7 +100,7 @@ provides:
     version: 1.50
   Astro::FITS::HdrTrans::SCUBA2:
     file: lib/Astro/FITS/HdrTrans/SCUBA2.pm
-    version: 1.50
+    version: 1.55
   Astro::FITS::HdrTrans::SOFI:
     file: lib/Astro/FITS/HdrTrans/SOFI.pm
     version: 1.50
@@ -140,6 +141,6 @@ requires:
   Scalar::Util: 0
   Time::Piece: 1.1
 resources:
-  license: http://opensource.org/licenses/gpl-license.php
-  repository: git://github.com/bradcavanagh/perl-Astro-FITS-HdrTrans.git
-version: 1.54
+  license: http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
+  repository: git://github.com/Starlink/perl-Astro-FITS-HdrTrans.git
+version: 1.55
