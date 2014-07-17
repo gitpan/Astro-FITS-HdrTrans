@@ -28,7 +28,7 @@ use base qw/ Astro::FITS::HdrTrans::UKIRTOld /;
 
 use vars qw/ $VERSION /;
 
-$VERSION = "1.55";
+$VERSION = "1.56";
 
 # for a constant mapping, there is no FITS header, just a generic
 # header that is constant
@@ -246,6 +246,36 @@ sub from_RA_TELESCOPE_OFFSET {
     }
   }
   return %return;
+}
+
+=item B<to_DETECTOR_READ_TYPE>
+
+Should be the "MODE" header but if this is missing we can look
+at INTTYPE instead.
+
+=cut
+
+sub to_DETECTOR_READ_TYPE {
+  my $self = shift;
+  my $FITS_headers = shift;
+
+  my %mode = (
+    CHOP        => 'CHOP',
+    'STARE+NDR' => 'ND_STARE',
+    STARE       => 'STARE',
+  );
+
+  if (exists $FITS_headers->{'MODE'}) {
+    return $FITS_headers->{'MODE'};
+  }
+  elsif (exists $FITS_headers->{'INTTYPE'}) {
+    my $inttype = $FITS_headers->{'INTTYPE'};
+    if (exists $mode{$inttype}) {
+      return $mode{$inttype};
+    }
+  }
+
+  return undef;
 }
 
 =item B<to_SAMPLING>

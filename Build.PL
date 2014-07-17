@@ -33,7 +33,7 @@ my $build = Module::Build->new
                    'Brad Cavanagh <b.cavanagh@jach.hawaii.edu>',
                    'Malcolm J. Currie <mjc@star.rl.ac.uk>',
                   ],
-   dist_version => '1.55',
+   dist_version => '1.56',
    script_files => [ qw/
                          translatehdr
                        / ],
@@ -58,6 +58,7 @@ my $build = Module::Build->new
                },
    build_requires => {
                       'Test::More' => 0,
+                      'Test::Number::Delta' => 0,
                       'Time::Piece' => 0,
                      },
    configure_requires => {

@@ -36,7 +36,7 @@ use vars qw/ $VERSION $DEBUG @ISA /;
 use Exporter 'import';
 our @EXPORT_OK = qw( translate_from_FITS translate_to_FITS );
 
-$VERSION = '1.55';
+$VERSION = '1.56';
 $DEBUG   = 0;
 
 # The reference list of classes we can try This list should be
@@ -519,7 +519,7 @@ sub determine_class {
     # We couldn't figure out which one to use.
     croak "Unable to determine header translation subclass. No matches for these headers when trying to convert "
       . ($fromfits ? 'from' : 'to' )
-        . " FITS using the following classes: ".join(",",@$classes);
+        . " FITS using the following classes: ".join(", ",@$classes);
   }
 
   # The class we wanted is the only key in the hash
